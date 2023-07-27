@@ -1,0 +1,11 @@
+﻿{
+  "Group": "Nop Station",
+  "FriendlyName": "Nop-Station Sales Forecasting",
+  "SystemName": "NopStation.Plugin.Misc.SalesForecasting",
+  "Version": "4.50.1.0",
+  "SupportedVersions": [ "4.60" ],
+  "Author": "Nop Station Team",
+  "DisplayOrder": 1,
+  "FileName": "NopStation.Plugin.Misc.SalesForecasting.dll",
+  "Description": "This plugin enables inventory prediction for nopCommerce store."
+}

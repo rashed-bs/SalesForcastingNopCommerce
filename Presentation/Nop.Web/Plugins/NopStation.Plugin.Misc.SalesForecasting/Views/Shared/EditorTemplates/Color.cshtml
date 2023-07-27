@@ -1,0 +1,49 @@
+@model string
+
+<style type="text/css">
+    .color-input {
+        display: none;
+    }
+
+    .k-picker-wrap.k-state-default span.k-select {
+        display: none;
+    }
+
+    .form-horizontal .k-textbox, .form-horizontal .k-colorpicker {
+        width: auto !important;
+    }
+
+    .k-picker-wrap.k-state-default {
+        padding-right: 0 !important;
+        height: 31px;
+        border-radius: 50%;
+    }
+
+    .k-colorpicker .k-selected-color, .k-picker-wrap.k-state-border-down .k-selected-color, .k-picker-wrap.k-state-focused {
+        border-radius: 50%;
+    }
+</style>
+
+@{
+    var colorCode = Model;
+    if (string.IsNullOrWhiteSpace(colorCode))
+    {
+        colorCode = "#000000";    
+    }
+}
+
+<input type="color" id="@Html.IdForModel()Picker" value="@colorCode" />
+<div class="color-input">
+    <input id="@Html.IdForModel()" name="@Html.NameForModel()" value="@colorCode" />
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#@Html.IdForModel()Picker").kendoColorPicker({
+            buttons: false,
+            change: function (e) {
+                $("#@Html.IdForModel()").val(e.value);
+            }
+        });
+    });
+</script>

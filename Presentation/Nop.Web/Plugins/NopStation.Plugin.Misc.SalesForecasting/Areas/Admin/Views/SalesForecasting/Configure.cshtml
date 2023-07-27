@@ -1,0 +1,48 @@
+﻿@model ConfigurationModel
+
+@{
+    ViewBag.PageTitle = T("Admin.NopStation.SalesForecasting.Title").Text;
+    NopHtml.SetActiveMenuItemSystemName("PowerBI.Configuration");
+}
+
+@await Component.InvokeAsync("StoreScopeConfiguration")
+
+<form asp-controller="SalesForecasting" asp-action="Configure" method="post">
+    <div class="panel-group">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <p>@T("Admin.NopStation.SalesForecasting.Instructions")</p>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="NumberofBestDemandProduct_OverrideForStore" asp-input="NumberofBestDemandProduct" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="NumberofBestDemandProduct" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="NumberofBestDemandProduct" asp-required="true" />
+                        <span asp-validation-for="NumberofBestDemandProduct"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-9 col-md-offset-3">
+                        <input type="submit" name="save" class="btn bg-primary" value="@T("Admin.Common.Save")" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<form asp-controller="SalesForecasting" asp-action="TrainModel" method="post">
+    <div class="panel-group">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <p>@T("Admin.NopStation.SalesForecasting.Model.Instructions")</p>
+                <div class="form-group">
+                    <div class="col-md-9 col-md-offset-3">
+                        <input type="submit" name="save" class="btn bg-primary" value="@T("Admin.NopStation.SalesForecasting.Configure.TrainModel")" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

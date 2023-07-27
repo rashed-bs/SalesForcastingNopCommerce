@@ -1,0 +1,16 @@
+﻿4.50.1.9: 
+    * 'Color' editor template added
+    
+4.50.1.8: 
+    * Updated key coloum
+    
+4.50.1.7: 
+    * Added image tag helper to identify width/height
+
+4.50.1.6: 
+    * 'Select2Product' editor template added
+    * 'Select2Category' editor template added
+    * 'Select2Manufacturer' editor template added
+
+4.50.1.0: 
+    * Initial release
