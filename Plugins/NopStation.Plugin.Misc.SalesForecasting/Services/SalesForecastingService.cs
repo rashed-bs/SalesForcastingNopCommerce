@@ -72,6 +72,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             }
 
         #endregion
+
         #region Utilities Prvious Version
 
         private IQueryable<SalesData> SalesHistoryQuery()
@@ -160,6 +161,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         }
 
         #endregion
+
         #region Methods Previous Version
 
         public virtual async Task<IEnumerable<SalesData>> GetSalesHistoryDataAsync(int? productId = null)
@@ -282,126 +284,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             return new DateTime(year, month, day);
         }
 
-        // Cubic interpolation method
-        private static double CubicInterpolate(double x, double x0, double x1, double y0, double y1, double m0, double m1)
-        {
-            double t = (x - x0) / (x1 - x0);
-            double t2 = t * t;
-            double t3 = t2 * t;
-            double a = 2 * t3 - 3 * t2 + 1;
-            double b = t3 - 2 * t2 + t;
-            double c = -2 * t3 + 3 * t2;
-            double d = t3 - t2;
-            return a * y0 + b * m0 * (x1 - x0) + c * y1 + d * m1 * (x1 - x0);
-        }
-
-        // Calculate the first derivatives (slopes) at each data point using central differences
-        private static double[] CalculateSlopesNextValue(List<_SalesData> dataset)
-        {
-            int n = dataset.Count;
-            double[] slopes = new double[n];
-
-            for (int i = 1; i < n - 1; i++)
-            {
-                double h1 = GetDateTime(dataset[i]).Subtract(GetDateTime(dataset[i - 1])).Days;
-                double h2 = GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days;
-                double y1 = dataset[i - 1].NextDayUnits;
-                double y2 = dataset[i].NextDayUnits;
-                double y3 = dataset[i + 1].NextDayUnits;
-
-                slopes[i] = (h2 * (y1 - y2) + h1 * (y2 - y3)) / (h1 * h2 * (h1 + h2));
-            }
-
-            // Extrapolate the first and last slopes
-            slopes[0] = 2 * slopes[1] - slopes[2];
-            slopes[n - 1] = 2 * slopes[n - 2] - slopes[n - 3];
-
-            return slopes;
-        }
-
-        // Calculate the first derivatives (slopes) at each data point using central differences
-        private static double[] CalculateSlopesPrevValue(List<_SalesData> dataset)
-        {
-            int n = dataset.Count;
-            double[] slopes = new double[n];
-
-            for (int i = 1; i < n - 1; i++)
-            {
-                double h1 = GetDateTime(dataset[i]).Subtract(GetDateTime(dataset[i - 1])).Days;
-                double h2 = GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days;
-                double y1 = dataset[i - 1].PreviousDayUnits;
-                double y2 = dataset[i].PreviousDayUnits;
-                double y3 = dataset[i + 1].PreviousDayUnits;
-
-                slopes[i] = (h2 * (y1 - y2) + h1 * (y2 - y3)) / (h1 * h2 * (h1 + h2));
-            }
-
-            // Extrapolate the first and last slopes
-            slopes[0] = 2 * slopes[1] - slopes[2];
-            slopes[n - 1] = 2 * slopes[n - 2] - slopes[n - 3];
-
-            return slopes;
-        }
-
-        // Perform cubic interpolation to fill in missing values in the dataset
-        public static List<_SalesData> FillMissingValues(List<_SalesData> dataset, List<int> weekends)
-        {
-            var filledDataset = new List<_SalesData>();
-
-            double[] slopesNextValue = CalculateSlopesNextValue(dataset);
-            double[] slopesPrevValue = CalculateSlopesPrevValue(dataset);
-
-            for (int i = 0; i < dataset.Count; i++)
-            {
-                filledDataset.Add(dataset[i]);
-
-                // Check if there's a missing value between two consecutive data points
-                if (i < dataset.Count - 1 && GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days > 1)
-                {
-                    DateTime startDate = GetDateTime(dataset[i]);
-                    DateTime endDate = GetDateTime(dataset[i+1]);
-
-                    double startValueNextValue = dataset[i].NextDayUnits;
-                    double endValueNextValue = dataset[i + 1].NextDayUnits;
-                    double startSlopeNextValue = slopesNextValue[i];
-                    double endSlopeNextValue = slopesNextValue[i + 1];
-
-                    double startValuePrevValue = dataset[i].PreviousDayUnits;
-                    double endValuePrevValue = dataset[i + 1].PreviousDayUnits;
-                    double startSlopePrevValue = slopesPrevValue[i];
-                    double endSlopePrevValue = slopesPrevValue[i + 1];
-
-                    // Calculate the number of missing days between the two data points
-                    int missingDays = (int)(endDate - startDate).TotalDays - 1;
-
-                    // Perform cubic interpolation for the missing values
-                    for (int j = 1; j <= missingDays; j++)
-                    {
-                        DateTime missingDate = startDate.AddDays(j);
-                        double interpolatedNextValue = CubicInterpolate((int)missingDate.DayOfWeek, (int)startDate.DayOfWeek, (int)endDate.DayOfWeek, startValueNextValue, endValueNextValue, startSlopeNextValue, endSlopeNextValue);
-
-                        double interpolatedPrevValue = CubicInterpolate((int)missingDate.DayOfWeek, (int)startDate.DayOfWeek, (int)endDate.DayOfWeek, startValuePrevValue, endValuePrevValue, startSlopePrevValue, endSlopePrevValue);
-
-                        // Add the interpolated data point to the filled dataset
-                        filledDataset.Add(new _SalesData
-                        {
-                            Year = missingDate.Year,
-                            Month = missingDate.Month,
-                            Day = missingDate.Day,
-                            CategoryID = dataset[i].CategoryID,
-                            IsWeekend = weekends.Contains((int)missingDate.DayOfWeek) ? (float)1.0 : (float)0.0,
-                            ShippingCharge = dataset[i].ShippingCharge,
-                            PercentageDiscount = dataset[i].PercentageDiscount,
-                            PreviousDayUnits =float.Max((float)interpolatedPrevValue, 0),
-                            NextDayUnits = float.Max((float)interpolatedNextValue, 0),
-                        });
-                    }
-                }
-            }
-
-            return filledDataset;
-        }
-
         // add respective discounts 
         public async Task<List<_SalesData>> AddDiscountData(List<_SalesData> dataset)
         {
@@ -492,8 +374,27 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var salesData = await query.ToListAsync();
 
             if (salesData.Count > 14)
+            {
                 //return FillMissingValues(salesData, weekends);
-                return salesData;
+                DateTime startDate = GetDateTime(salesData[0]);
+                DateTime endDate = GetDateTime(salesData[salesData.Count-1]);
+                var dataRecordPossible = endDate.Subtract(startDate).Days;
+                var dataRecordAvaiable = salesData.Count;
+                var percentageOfDataAvaiable = ((float)dataRecordAvaiable / (float)dataRecordPossible) * 100;
+
+                // use interpolation if the avaiable data above 80%
+                if (percentageOfDataAvaiable > 80)
+                {
+                    return FillMissingValuesByMovingAverage(salesData, weekends);
+                }
+                else
+                {
+                    var enrichedData = FillMissingValuesByCherryPick(salesData, weekends);
+                    dataRecordAvaiable = enrichedData.Count;
+                    percentageOfDataAvaiable = ((float)dataRecordAvaiable / (float)dataRecordPossible) * 100;
+                    return FillMissingValuesByMovingAverage(enrichedData, weekends);
+                }
+            }
             else
                 return salesData;
         }
@@ -566,6 +467,249 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         #endregion
 
+        #region Missing Values Utilities 
+        // Cubic interpolation method
+        private static double CubicInterpolate(double x, double x0, double x1, double y0, double y1, double m0, double m1)
+        {
+            double t = (x - x0) / (x1 - x0);
+            double t2 = t * t;
+            double t3 = t2 * t;
+            double a = 2 * t3 - 3 * t2 + 1;
+            double b = t3 - 2 * t2 + t;
+            double c = -2 * t3 + 3 * t2;
+            double d = t3 - t2;
+            return a * y0 + b * m0 * (x1 - x0) + c * y1 + d * m1 * (x1 - x0);
+        }
+
+        // Calculate the first derivatives (slopes) at each data point using central differences
+        private static double[] CalculateSlopesNextValue(List<_SalesData> dataset)
+        {
+            int n = dataset.Count;
+            double[] slopes = new double[n];
+
+            for (int i = 1; i < n - 1; i++)
+            {
+                double h1 = GetDateTime(dataset[i]).Subtract(GetDateTime(dataset[i - 1])).Days;
+                double h2 = GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days;
+                double y1 = dataset[i - 1].NextDayUnits;
+                double y2 = dataset[i].NextDayUnits;
+                double y3 = dataset[i + 1].NextDayUnits;
+
+                slopes[i] = (h2 * (y1 - y2) + h1 * (y2 - y3)) / (h1 * h2 * (h1 + h2));
+            }
+
+            // Extrapolate the first and last slopes
+            slopes[0] = 2 * slopes[1] - slopes[2];
+            slopes[n - 1] = 2 * slopes[n - 2] - slopes[n - 3];
+
+            return slopes;
+        }
+
+        // Calculate the first derivatives (slopes) at each data point using central differences
+        private static double[] CalculateSlopesPrevValue(List<_SalesData> dataset)
+        {
+            int n = dataset.Count;
+            double[] slopes = new double[n];
+
+            for (int i = 1; i < n - 1; i++)
+            {
+                double h1 = GetDateTime(dataset[i]).Subtract(GetDateTime(dataset[i - 1])).Days;
+                double h2 = GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days;
+                double y1 = dataset[i - 1].PreviousDayUnits;
+                double y2 = dataset[i].PreviousDayUnits;
+                double y3 = dataset[i + 1].PreviousDayUnits;
+
+                slopes[i] = (h2 * (y1 - y2) + h1 * (y2 - y3)) / (h1 * h2 * (h1 + h2));
+            }
+
+            // Extrapolate the first and last slopes
+            slopes[0] = 2 * slopes[1] - slopes[2];
+            slopes[n - 1] = 2 * slopes[n - 2] - slopes[n - 3];
+
+            return slopes;
+        }
+
+        // Perform cubic interpolation to fill in missing values in the dataset
+        public static List<_SalesData> FillMissingValuesByIterpolation(List<_SalesData> dataset, List<int> weekends)
+        {
+            var filledDataset = new List<_SalesData>();
+
+            double[] slopesNextValue = CalculateSlopesNextValue(dataset);
+            double[] slopesPrevValue = CalculateSlopesPrevValue(dataset);
+
+            for (int i = 0; i < dataset.Count; i++)
+            {
+                filledDataset.Add(dataset[i]);
+
+                // Check if there's a missing value between two consecutive data points
+                if (i < dataset.Count - 1 && GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days > 1)
+                {
+                    DateTime startDate = GetDateTime(dataset[i]);
+                    DateTime endDate = GetDateTime(dataset[i + 1]);
+
+                    double startValueNextValue = dataset[i].NextDayUnits;
+                    double endValueNextValue = dataset[i + 1].NextDayUnits;
+                    double startSlopeNextValue = slopesNextValue[i];
+                    double endSlopeNextValue = slopesNextValue[i + 1];
+
+                    double startValuePrevValue = dataset[i].PreviousDayUnits;
+                    double endValuePrevValue = dataset[i + 1].PreviousDayUnits;
+                    double startSlopePrevValue = slopesPrevValue[i];
+                    double endSlopePrevValue = slopesPrevValue[i + 1];
+
+                    // Calculate the number of missing days between the two data points
+                    int missingDays = (int)(endDate - startDate).TotalDays - 1;
+
+                    // Perform cubic interpolation for the missing values
+                    for (int j = 1; j <= missingDays; j++)
+                    {
+                        DateTime missingDate = startDate.AddDays(j);
+                        double interpolatedNextValue = CubicInterpolate((int)missingDate.DayOfWeek, (int)startDate.DayOfWeek, (int)endDate.DayOfWeek, startValueNextValue, endValueNextValue, startSlopeNextValue, endSlopeNextValue);
+
+                        double interpolatedPrevValue = CubicInterpolate((int)missingDate.DayOfWeek, (int)startDate.DayOfWeek, (int)endDate.DayOfWeek, startValuePrevValue, endValuePrevValue, startSlopePrevValue, endSlopePrevValue);
+
+                        // Add the interpolated data point to the filled dataset
+                        filledDataset.Add(new _SalesData
+                        {
+                            Year = missingDate.Year,
+                            Month = missingDate.Month,
+                            Day = missingDate.Day,
+                            CategoryID = dataset[i].CategoryID,
+                            IsWeekend = weekends.Contains((int)missingDate.DayOfWeek) ? (float)1.0 : (float)0.0,
+                            ShippingCharge = dataset[i].ShippingCharge,
+                            PercentageDiscount = dataset[i].PercentageDiscount,
+                            PreviousDayUnits = float.Max((float)interpolatedPrevValue, 0),
+                            NextDayUnits = float.Max((float)interpolatedNextValue, 0),
+                        });
+                    }
+                }
+            }
+
+            return filledDataset;
+        }
+
+        // Perform cherrypick method for filling in the missing values in dataset
+        public static List<_SalesData> FillMissingValuesByCherryPick(List<_SalesData> dataset, List<int> weekends)
+        {
+            var filledDataset = new List<_SalesData>();
+            var prevNextUnitsCache = new Dictionary<string, Tuple<float, float>>(); // Cache previous and next units
+
+            foreach(var eachSale  in dataset)
+            {
+                string key = $"{eachSale.Month}_{eachSale.Day}";
+                prevNextUnitsCache[key] = new Tuple<float,float>(eachSale.PreviousDayUnits, eachSale.NextDayUnits);
+            }
+
+            for (int i = 0; i < dataset.Count; i++)
+            {
+                filledDataset.Add(dataset[i]);
+
+                // Check if there's a missing value between two consecutive data points
+                if (i < dataset.Count - 1 && GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days > 1)
+                {
+                    DateTime startDate = GetDateTime(dataset[i]);
+                    DateTime endDate = GetDateTime(dataset[i + 1]);
+
+                    // Calculate the number of missing days between the two data points
+                    int missingDays = (int)(endDate - startDate).TotalDays - 1;
+
+                    // Perform cubic interpolation for the missing values
+                    for (int j = 1; j <= missingDays; j++)
+                    {
+                        DateTime missingDate = startDate.AddDays(j);
+                        string key = $"{missingDate.Month}_{missingDate.Day}";
+                        float cherryPickedPrevValue = 0;
+                        float cherryPickedNextValue = 0;
+
+                        if(prevNextUnitsCache.ContainsKey(key))
+                        {
+                            cherryPickedPrevValue = prevNextUnitsCache[key].Item1;
+                            cherryPickedNextValue = prevNextUnitsCache[key].Item2;
+                        }
+
+                        // Add the interpolated data point to the filled dataset
+                        filledDataset.Add(new _SalesData
+                        {
+                            Year = missingDate.Year,
+                            Month = missingDate.Month,
+                            Day = missingDate.Day,
+                            CategoryID = dataset[i].CategoryID,
+                            IsWeekend = weekends.Contains((int)missingDate.DayOfWeek) ? (float)1.0 : (float)0.0,
+                            ShippingCharge = dataset[i].ShippingCharge,
+                            PercentageDiscount = dataset[i].PercentageDiscount,
+                            PreviousDayUnits = cherryPickedPrevValue,
+                            NextDayUnits = cherryPickedNextValue
+                        });
+                    }
+                }
+            }
+
+            return filledDataset;
+        }
+
+        // Perform movingAverage or windowing method for filling in the missing values in dataset
+        public static List<_SalesData> FillMissingValuesByMovingAverage(List<_SalesData> dataset, List<int> weekends)
+        {
+            var filledDataset = new List<_SalesData>();
+
+            for (int i = 0; i < dataset.Count; i++)
+            {
+                filledDataset.Add(dataset[i]);
+
+                // Check if there's a missing value between two consecutive data points
+                if (i < dataset.Count - 1 && GetDateTime(dataset[i + 1]).Subtract(GetDateTime(dataset[i])).Days > 1)
+                {
+                    DateTime startDate = GetDateTime(dataset[i]);
+                    DateTime endDate = GetDateTime(dataset[i + 1]);
+
+                    // Calculate the number of missing days between the two data points
+                    int missingDays = (int)(endDate - startDate).TotalDays - 1;
+
+                    // Perform cubic interpolation for the missing values
+                    for (int j = 1; j <= missingDays; j++)
+                    {
+                        #region moving average calculation
+                        DateTime missingDate = startDate.AddDays(j);
+                        float movingAvgPrev = 0;
+                        float movingAvgNext = 0;
+
+                        if (filledDataset.Count == 1)
+                        {
+                            movingAvgPrev = filledDataset[0].PreviousDayUnits;
+                            movingAvgNext = filledDataset[0].NextDayUnits;
+                        }
+                        else if (filledDataset.Count == 2)
+                        {
+                            movingAvgPrev = (filledDataset[0].PreviousDayUnits + filledDataset[1].PreviousDayUnits) / 2;
+                            movingAvgNext = (filledDataset[0].NextDayUnits + filledDataset[1].NextDayUnits) / 2;
+                        }
+                        else if (filledDataset.Count > 2)
+                        {
+                            movingAvgPrev = (filledDataset[0].PreviousDayUnits + filledDataset[1].PreviousDayUnits + filledDataset[2].PreviousDayUnits) / 3;
+                            movingAvgNext = (filledDataset[0].NextDayUnits + filledDataset[1].NextDayUnits + filledDataset[2].NextDayUnits) / 3;
+                        }
+                        #endregion
+
+                        // Add the interpolated data point to the filled dataset
+                        filledDataset.Add(new _SalesData
+                        {
+                            Year = missingDate.Year,
+                            Month = missingDate.Month,
+                            Day = missingDate.Day,
+                            CategoryID = dataset[i].CategoryID,
+                            IsWeekend = weekends.Contains((int)missingDate.DayOfWeek) ? (float)1.0 : (float)0.0,
+                            ShippingCharge = dataset[i].ShippingCharge,
+                            PercentageDiscount = dataset[i].PercentageDiscount,
+                            PreviousDayUnits = movingAvgPrev,
+                            NextDayUnits = movingAvgNext,
+                        });
+                    }
+                }
+            }
+
+            return filledDataset;
+        }
+        #endregion
 
         #region Methods New Version
         public virtual async Task<(bool, string)> TrainAndTestModelAsync(bool logInfo = false)

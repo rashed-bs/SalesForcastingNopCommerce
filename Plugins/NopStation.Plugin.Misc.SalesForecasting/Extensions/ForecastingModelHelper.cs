@@ -148,11 +148,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
             // Save the forecasting model so that it can be loaded within an end-user app.
             forecastEngine.CheckPoint(mlContext, outputModelPath);
-
-            var predictions = TimeSeriesProductForecastingPrediction(mlContext, outputModelPath);
         }
 
-        public static WeeklySalesTimeSeriesPrediction TimeSeriesProductForecastingPrediction(MLContext mlContext, string outputModelPath)
+        public static WeeklySalesTimeSeriesPrediction TimeSeriesSalesForecastingPredictionWeekly(MLContext mlContext, string outputModelPath)
         {
             // Load the forecast engine that has been previously saved.
             ITransformer forecaster;
