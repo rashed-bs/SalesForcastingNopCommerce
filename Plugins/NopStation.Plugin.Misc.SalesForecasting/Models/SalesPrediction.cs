@@ -1,20 +1,21 @@
-﻿namespace NopStation.Plugin.Misc.SalesForecasting.Models
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace NopStation.Plugin.Misc.SalesForecasting.Models
 {
-    /// <summary>
-    /// This is the output of the scored regression model, the prediction.
-    /// </summary>
+
     public class SalesRegressionPrediction
     {
         // Below columns are produced by the model's predictor.
         public float Score { get; set; }
     }
 
-    /// <summary>
-    /// This is the output of the scored time series model, the prediction.
-    /// </summary>
-    public class SalesTimeSeriesPrediction
+    public class WeeklySalesTimeSeriesPrediction
     {
-        public float[] ForecastedProductUnits { get; set; }
+        public float[] ForecastedWeeklySalesUnits { get; set; }
 
         public float[] ConfidenceLowerBound { get; set; }
 

@@ -14,13 +14,25 @@ namespace NopStation.Plugin.Misc.SalesForecasting
         /// </summary>
         public static string SystemName => "NopStation.Plugin.Misc.SalesForecasting";
 
-        public static string MLModelPath => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFiles";
+        public static string MLModelPathTimeSeries => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesTimeSeries";
 
-        public static string MLModelMonthlyPredictionPath => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFiles/MonthlyModels";
+        public static string MLModelMonthlyPredictionPathTimeSeries => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesTimeSeries/MonthlyModels";
 
-        public static string MLModelWeeklyPredictionPath => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFiles/WeeklyModels";
+        public static string MLModelWeeklyPredictionPathTimeSeries => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesTimeSeries/WeeklyModels";
 
-        public static string RegressionSalesForecastingModelPath => "sales_fastTreeTweedie.zip";
+
+
+        public static string MLModelPathRegression => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesRegression";
+
+        public static string MLModelMonthlyPredictionPathRegression => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesRegression/MonthlyModels";
+
+        public static string MLModelWeeklyPredictionPathRegression => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesRegression/WeeklyModels";
+
+
+
+
+
+        public static string RegressionProductSalesFastTreeWeedieModelName => "Product_Sales_Regression_fastTreeTweedie";
 
         public static string RegressionProductForecastingModelPath => "product_month_fastTreeTweedie.zip";
 

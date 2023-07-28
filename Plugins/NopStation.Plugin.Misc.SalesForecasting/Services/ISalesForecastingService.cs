@@ -9,12 +9,16 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 {
     public interface ISalesForecastingService
     {
-        Task<IEnumerable<SalesData>> GetSalesHistoryDataAsync(int? productId = null);
+        Task<(bool, string)> TrainWeeklySalesPredictionModelAsync(bool logInfo = false);
 
-        Task<IEnumerable<ProductData>> GetProductHistoryDataAsync(int? productId = null);
+        Task<(bool, string)> TrainLargeFeatureProductSalesPredictionModelAsync(bool logInfo = false);
 
-        Task<(bool, string)> TrainAndTestModelAsync(bool logInfo = false);
+        Task<(bool, string)> TrainBaseCategoryWiseProductSalesPredictionModelAsync(bool logInfo = false);
 
-        Task<ProductUnitRegressionPrediction> ProductForecastingPredictionAsync(int productId);
+        Task<(bool, string)> TrainBaseLocationWiseProductSalesPredictionModelAsync(bool logInfo = false);
+
+        Task<(bool, string)> TrainEnsembleMetaModelAsync(bool logInfo = false);
+
+
     }
 }

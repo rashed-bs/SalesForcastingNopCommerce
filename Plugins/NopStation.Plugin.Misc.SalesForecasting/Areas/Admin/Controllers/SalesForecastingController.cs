@@ -114,12 +114,67 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var response = await _salesForecastingService.TrainAndTestModelAsync();
+            bool largeDataSet = false;
 
-            if (response.Item1)
-                _notificationService.SuccessNotification("Training successfull");
+            #region Train Sales Prediction Model 
+            var trainWeeklyTimeSeriesModelStatus = await _salesForecastingService.TrainWeeklySalesPredictionModelAsync();
+
+            if (trainWeeklyTimeSeriesModelStatus.Item1)
+                _notificationService.SuccessNotification("Training of time series model successfull");
             else
-               _notificationService.ErrorNotification("Training failed");
+                _notificationService.ErrorNotification("Training of time series model failed");
+            #endregion
+
+            #region Train Daily Product Sales Largre Dimension Model
+            /// <summary>
+            /// Use this model when the dataset is very big otherwise use 
+            /// specific and low dimension models
+            ///</summary>
+            
+            if(largeDataSet)
+            {
+                var trainWeeklyPrductSalesPredictionModelStatus = await _salesForecastingService.TrainLargeFeatureProductSalesPredictionModelAsync();
+
+                if (trainWeeklyPrductSalesPredictionModelStatus.Item1)
+                    _notificationService.SuccessNotification("Training of product sales prediction model successfull");
+                else
+                    _notificationService.ErrorNotification("Training of product sales prediction model failed");
+            }
+
+            #endregion
+
+            #region Train Ensemble Learning Model
+
+            if(!largeDataSet)
+            {
+                #region Train Monthly Product Sales Prediction Base Model (Category specific-Building block of Ensemble learning)
+
+                var categoryWiseBaseModelStatus = await _salesForecastingService.TrainBaseCategoryWiseProductSalesPredictionModelAsync();
+                if (categoryWiseBaseModelStatus.Item1)
+                    _notificationService.SuccessNotification("Training of Category-Base model successfull");
+                else
+                    _notificationService.ErrorNotification("Training of Category-Base model failed");
+
+                #endregion
+
+                #region Train Monthly Product Sales Prediction Base Model (Location specific-Building block of Ensemble learning)
+                var locationWiseBaseModelStatus = await _salesForecastingService.TrainBaseLocationWiseProductSalesPredictionModelAsync();
+                if (locationWiseBaseModelStatus.Item1)
+                    _notificationService.SuccessNotification("Training of Location-Base model successfull");
+                else
+                    _notificationService.ErrorNotification("Training of Location-Base model failed");
+                #endregion
+
+                #region Train Ensemble learning)
+                var trainEnsembleMetaModelStatus = await _salesForecastingService.TrainEnsembleMetaModelAsync();
+                if (trainEnsembleMetaModelStatus.Item1)
+                    _notificationService.SuccessNotification("Training of Ensemble Meta model successfull");
+                else
+                    _notificationService.ErrorNotification("Training of Ensemble Meta model failed");
+                #endregion
+            }
+
+            #endregion
 
             return RedirectToAction("Configure");
         }
@@ -128,12 +183,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
         {
             var searchModel = await _salesForecastingModelFactory.PreparePredictionSearchModel(new PredictionSearchModel());
             return View(searchModel);
-        }
-
-        public async Task<IActionResult> SalesHistoryAsync()
-        {
-            var model = await _salesForecastingService.GetSalesHistoryDataAsync();
-            return Json(model);
         }
 
         public async Task<IActionResult> WeeklyAnalysisListAsync(PredictionSearchModel searchModel)
