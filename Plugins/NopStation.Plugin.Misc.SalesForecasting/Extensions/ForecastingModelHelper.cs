@@ -110,10 +110,36 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
         #endregion
 
-        #region Regression Model Specific Feature (Category)
+        #region Base Category Wise Model
+        public static void TrainAndSaveCategoryWiseBaseModel(MLContext mlContext, List<CategoryBaseModelData> productSalesHistory, string outputModelPath)
+        {
+            var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
+
+            var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
+
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryBaseModelData.CategoryAvgPrice), nameof(CategoryBaseModelData.Avg), nameof(CategoryBaseModelData.Min), nameof(CategoryBaseModelData.Max), nameof(CategoryBaseModelData.UnitsSoldCurrent), nameof(CategoryBaseModelData.UnitsSoldPrev))
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "CategoryFeatures", inputColumnName: nameof(CategoryBaseModelData.CategoryId)))
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "YearFeatures", inputColumnName: nameof(CategoryBaseModelData.Year)))
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "MonthFeatures", inputColumnName: nameof(CategoryBaseModelData.Month)))
+                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CategoryFeatures", "YearFeatures", "MonthFeatures"))
+                .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(CategoryBaseModelData.Next)))
+                .Append(trainer);
+
+            var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
+
+            // Train the model.
+            var model = trainingPipeline.Fit(trainingDataView);
+
+            // Save the model for later comsumption from end-user apps.
+            mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+        }
+
         #endregion
 
-        #region Regression Model Specific Feature (Location)
+        #region Base Location Wise Model
+        #endregion
+
+        #region Ensemble Location Wise Model
         #endregion
     }
 }

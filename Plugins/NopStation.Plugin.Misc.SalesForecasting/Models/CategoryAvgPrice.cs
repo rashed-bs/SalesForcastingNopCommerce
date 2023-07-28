@@ -11,4 +11,11 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
         public int CategoryId { get; set; }
         public float AvgPrice { get; set; }
     }
+    
+    public class TempCategoryAvgPrice
+    {
+        public int CategoryId { get; set; }
+        public float OrderTotal { get; set; }
+        public int Unit { get; set; }
+    }
 }

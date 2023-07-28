@@ -24,6 +24,7 @@ using Nop.Services.Discounts;
 using Nop.Services.Common;
 using Nop.Core.Domain.Common;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using DocumentFormat.OpenXml.Drawing.Spreadsheet;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Services
 {
@@ -31,12 +32,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
     public partial class SalesForecastingService : ISalesForecastingService
     {
         #region ctor
-        private static CacheKey CategoryGroupsCacheKey => new("CategoryGroupsCacheKey"); // todo: move it to the default
         private readonly IRepository<Order> _orderRepository;
             private readonly IRepository<ProductCategory> _productCategoryRepository;
             private readonly IRepository<OrderItem> _orderItemRepository;
             private readonly IRepository<Address> _addressRepository;
             private readonly IRepository<Product> _productRepository;
+            private readonly IRepository<Category> _categoryRepository;
             private readonly IStaticCacheManager _staticCacheManager;
             private readonly INopFileProvider _fileProvider;
             private readonly ICategoryService _categoryService;
@@ -53,6 +54,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 IRepository<OrderItem> orderItemRepository,
                 IRepository<Product> productRepository,
                 IStaticCacheManager staticCacheManager,
+                IRepository<Category> categoryRepository,
                 IDiscountService discountService,
                 INopFileProvider fileProvider,
                 ICategoryService categoryService,
@@ -68,6 +70,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 _staticCacheManager = staticCacheManager;
                 _fileProvider = fileProvider;
                 _categoryService = categoryService;
+                _categoryRepository = categoryRepository;
+                _categoryService = categoryService;
                 _storeContext = storeContext;
                 _productService = productService;
                 _discountService = discountService;
@@ -78,6 +82,71 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         #endregion
 
         #region Utilities
+        public async Task<Dictionary<int, int>> CreateCategoryMappingSubToRoot()
+        {
+            var categoryMappingSubToRoot = new Dictionary<int, int>();
+            var categoryInformationsQuery = from c in _categoryRepository.Table
+                                            select new CategoryMappingSubToRoot
+                                            {
+                                                SubCategoryId = c.Id,
+                                                RootId = c.ParentCategoryId
+                                            };
+            var categoryInformations = await categoryInformationsQuery.ToListAsync();
+
+            // Initialize the parent (root) dictionary where each category is its own parent (root)
+            var parent = new Dictionary<int, int>();
+            foreach (var categoryInfo in categoryInformations)
+            {
+                parent[categoryInfo.SubCategoryId] = categoryInfo.SubCategoryId;
+            }
+
+            // Find the root of a category (with path compression)
+            int findRoot(int categoryId)
+            {
+                if (parent[categoryId] != categoryId)
+                {
+                    parent[categoryId] = findRoot(parent[categoryId]); // Path compression
+                }
+                return parent[categoryId];
+            }
+
+            // Union operation to merge two disjoint sets
+            void union(int category1, int category2)
+            {
+                var root1 = findRoot(category1);
+                var root2 = findRoot(category2);
+
+                if (root1 != root2)
+                {
+                    parent[root2] = root1;
+                }
+            }
+
+            // Build the disjoint sets using the DSU algorithm
+            foreach (var categoryInfo in categoryInformations)
+            {
+                var subCategory = categoryInfo.SubCategoryId;
+                var rootCategory = categoryInfo.RootId;
+
+                // If the category has no parent (rootId is 0), consider it as the root category
+                if (rootCategory == 0)
+                {
+                    rootCategory = subCategory;
+                }
+
+                union(rootCategory, subCategory);
+            }
+
+            // Create the categoryMappingSubToRoot dictionary
+            foreach (var categoryInfo in categoryInformations)
+            {
+                var subCategory = categoryInfo.SubCategoryId;
+                var rootCategory = findRoot(subCategory);
+                categoryMappingSubToRoot[subCategory] = rootCategory;
+            }
+
+            return categoryMappingSubToRoot;
+        }
         public async Task<List<SalesData>> AddDiscountData(List<SalesData> dataset)
         {
             var allDiscounts = await _discountService.GetAllDiscountsAsync();
@@ -120,6 +189,40 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                             AvgPrice = (float)gcp.Sum(x => x.OrderTotal) / gcp.Sum(x => x.Unit),
                         };
             return query;
+        }
+        private async Task<Dictionary<int, float>> RootCategoryAvgPrices()
+        {
+            // get category information
+            var categorySubToRoot = await _staticCacheManager.GetAsync(SalesForecastingDefaults.CategorySubToRootMappingCacheKey, CreateCategoryMappingSubToRoot);
+
+            var avgPriceMap = new Dictionary<int, float>();
+
+            var query = from oi in _orderItemRepository.Table
+                        join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
+                        where o.OrderTotal != 0
+                        select new TempCategoryAvgPrice
+                        {
+                            CategoryId = pc.CategoryId,
+                            OrderTotal = (float)o.OrderTotal,
+                            Unit = oi.Quantity
+                        };
+
+            var queryResult = await query.ToListAsync();
+            queryResult.ForEach(x => x.CategoryId = categorySubToRoot[x.CategoryId]);
+            var categoryAvgPriceInformations = queryResult.GroupBy(x => new { x.CategoryId })
+                .Select(g => new CategoryAvgPrice
+                {
+                    CategoryId = g.Key.CategoryId,
+                    AvgPrice = (float)g.Sum(x => x.OrderTotal) / g.Sum(x => x.Unit)
+                });
+
+            foreach (var  categoryAvgPrice in categoryAvgPriceInformations)
+            {
+                avgPriceMap[categoryAvgPrice.CategoryId] = categoryAvgPrice.AvgPrice;
+            }
+
+            return avgPriceMap;
         }
         private string CategoryGroupModelName(List<CategoryAvgPrice> categoryAvgPrices)
         {
@@ -297,6 +400,58 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                             Units = fcoi.Units // this is to predict
                         };
             return await query.ToListAsync();
+        }
+        private async Task<List<CategoryBaseModelData>> CategoryBaseModelSalesHistory()
+        {
+            var categorySubToRoot = await _staticCacheManager.GetAsync(SalesForecastingDefaults.CategorySubToRootMappingCacheKey, CreateCategoryMappingSubToRoot);
+
+            var categoryAvgPrices = await _staticCacheManager.GetAsync(SalesForecastingDefaults.RootCategoryAvgPricesCacheKey, RootCategoryAvgPrices);
+
+            var query = from oi in _orderItemRepository.Table
+                        join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
+                        where o.OrderTotal != 0
+                        select new CategoryBaseTempModelData
+                        {
+                            Year = o.CreatedOnUtc.Date.Year,
+                            Month = o.CreatedOnUtc.Date.Month,
+                            CategoryId = pc.CategoryId,
+                            OrderTotal = (float)o.OrderTotal,
+                            Unit = oi.Quantity
+                        };
+            var queryResult = await query.ToListAsync();
+
+            queryResult.ForEach(x => x.CategoryId = categorySubToRoot[(int)x.CategoryId]);
+
+            var groupedResult = queryResult
+                .GroupBy(x => new { x.Year, x.Month, x.CategoryId })
+                .Select(g => new CategoryBaseTempModelData
+                {
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    CategoryId = g.Key.CategoryId,
+                    Avg = g.Sum(x => x.Unit) / g.Count(),
+                    Max = g.Max(x => x.Unit),
+                    Min = g.Min(x => x.Unit),
+                    CategoryAvgPrice = categoryAvgPrices[(int)g.Key.CategoryId],
+                    OrderTotal = g.Sum(x => x.OrderTotal),
+                    Unit = g.Sum(x => x.Unit)
+                })
+                .ToList();
+            var finalResut = groupedResult.Select((x, index) => new CategoryBaseModelData
+            {
+                Year = (int)x.Year,
+                Month = (int)x.Month,
+                Avg = (float)x.Avg, 
+                Max = (float)x.Max,
+                Min = (float)x.Min,
+                CategoryAvgPrice = (float)x.CategoryAvgPrice, 
+                CategoryId = (int)x.CategoryId, 
+                UnitsSoldCurrent = (float)x.Unit, 
+                UnitsSoldPrev = index > 0 ? (float)groupedResult[index - 1].Unit : 0, 
+                Next = index < groupedResult.Count - 1 ? (float)groupedResult[index + 1].Unit : 0
+            });
+            return finalResut.ToList();
         }
 
         #endregion
@@ -554,7 +709,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var categoryGroups = await GetCategoryGroups();
             
             // save the group in cache
-            await _staticCacheManager.SetAsync(_staticCacheManager.PrepareKeyForDefaultCache(CategoryGroupsCacheKey), categoryGroups);
+            await _staticCacheManager.SetAsync(_staticCacheManager.PrepareKeyForDefaultCache(SalesForecastingDefaults.CategoryGroupsCacheKey), categoryGroups);
 
             // clean up the directories 
             var mLModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathTimeSeries);
@@ -633,43 +788,41 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         }
         #endregion
 
-        #region Base and Ensemble Methods
-
-        // train category specific base model 
+        #region Base Category Model Methods
         public async Task<(bool, string)> TrainBaseCategoryWiseProductSalesPredictionModelAsync(bool logInfo = false)
         {
             var sucess = false;
 
-            var productSalesHistory = await ProductSalesHistoryQuery();
-
-            //var productHistory = await GetProductHistoryDataAsync();
+            var productSalesHistory = await CategoryBaseModelSalesHistory();
 
             // clean up the directories 
-            var mLModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathRegression);
+            var mLModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathEnsemble);
             if (_fileProvider.DirectoryExists(mLModelPath))
                 _fileProvider.DeleteDirectory(mLModelPath);
             _fileProvider.CreateDirectory(mLModelPath);
 
-            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathRegression);
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
             if (_fileProvider.DirectoryExists(mlMonthlyModelPath))
                 _fileProvider.DeleteDirectory(mlMonthlyModelPath);
             _fileProvider.CreateDirectory(mlMonthlyModelPath);
 
-            var mlWeeklyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathRegression);
+            var mlWeeklyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathEnsemble);
             if (_fileProvider.DirectoryExists(mlWeeklyModelPath))
                 _fileProvider.DeleteDirectory(mlWeeklyModelPath);
             _fileProvider.CreateDirectory(mlWeeklyModelPath);
 
-            var outputPathToSaveModel = _fileProvider.Combine(mlWeeklyModelPath, SalesForecastingDefaults.RegressionProductSalesFastTreeWeedieModelName);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryWiseBaseModel);
 
-            ForecastingModelHelper.TrainAndSaveLargeFeatureRegressionProductSalesForecastingModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            ForecastingModelHelper.TrainAndSaveCategoryWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
 
             sucess = true;
 
             return (sucess, string.Empty);
         }
 
-        // train location specific base model 
+        #endregion
+
+        #region Base Location Model Methods
         public async Task<(bool, string)> TrainBaseLocationWiseProductSalesPredictionModelAsync(bool logInfo = false)
         {
             var sucess = false;
@@ -702,14 +855,17 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             return (sucess, string.Empty);
         }
-        
-        // train and save ensemble model 
+
+        #endregion
+
+        #region Ensemble Model Methods
         public async Task<(bool, string)> TrainEnsembleMetaModelAsync(bool logInfo = false)
         {
             bool success = false;
 
             return (success, string.Empty);
         }
+
         #endregion
     }
 }
