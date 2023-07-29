@@ -25,10 +25,12 @@ using Nop.Services.Common;
 using Nop.Core.Domain.Common;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using DocumentFormat.OpenXml.Drawing.Spreadsheet;
+using NopStation.Plugin.Misc.SalesForecasting.Models.DataPreprocessingModels;
+using NopStation.Plugin.Misc.SalesForecasting.Helpers;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Services
 {
-    
+
     public partial class SalesForecastingService : ISalesForecastingService
     {
         #region ctor
@@ -82,6 +84,60 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         #endregion
 
         #region Utilities
+        public void PathPreparation()
+        {
+            #region time series
+            var mLModelPathTime = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathTimeSeries);
+            if (_fileProvider.DirectoryExists(mLModelPathTime))
+                _fileProvider.DeleteDirectory(mLModelPathTime);
+            _fileProvider.CreateDirectory(mLModelPathTime);
+
+            var mlMonthlyModelPathTime = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathTimeSeries);
+            if (_fileProvider.DirectoryExists(mlMonthlyModelPathTime))
+                _fileProvider.DeleteDirectory(mlMonthlyModelPathTime);
+            _fileProvider.CreateDirectory(mlMonthlyModelPathTime);
+
+            var mlWeeklyModelPathTime = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathTimeSeries);
+            if (_fileProvider.DirectoryExists(mlWeeklyModelPathTime))
+                _fileProvider.DeleteDirectory(mlWeeklyModelPathTime);
+            _fileProvider.CreateDirectory(mlWeeklyModelPathTime);
+            #endregion
+
+            #region Regression
+            var mLModelPathRegression = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathRegression);
+            if (_fileProvider.DirectoryExists(mLModelPathRegression))
+                _fileProvider.DeleteDirectory(mLModelPathRegression);
+            _fileProvider.CreateDirectory(mLModelPathRegression);
+
+            var mlMonthlyModelPathRegression = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathRegression);
+            if (_fileProvider.DirectoryExists(mlMonthlyModelPathRegression))
+                _fileProvider.DeleteDirectory(mlMonthlyModelPathRegression);
+            _fileProvider.CreateDirectory(mlMonthlyModelPathRegression);
+
+            var mlWeeklyModelPathRegression = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathRegression);
+            if (_fileProvider.DirectoryExists(mlWeeklyModelPathRegression))
+                _fileProvider.DeleteDirectory(mlWeeklyModelPathRegression);
+            _fileProvider.CreateDirectory(mlWeeklyModelPathRegression);
+            #endregion
+
+            #region Ensemble
+            var mLModelPathEnsemble = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathEnsemble);
+            if (_fileProvider.DirectoryExists(mLModelPathEnsemble))
+                _fileProvider.DeleteDirectory(mLModelPathEnsemble);
+            _fileProvider.CreateDirectory(mLModelPathEnsemble);
+
+            var mlMonthlyModelPathEnsemble = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
+            if (_fileProvider.DirectoryExists(mlMonthlyModelPathEnsemble))
+                _fileProvider.DeleteDirectory(mlMonthlyModelPathEnsemble);
+            _fileProvider.CreateDirectory(mlMonthlyModelPathEnsemble);
+
+            var mlWeeklyModelPathEnsemble = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathEnsemble);
+            if (_fileProvider.DirectoryExists(mlWeeklyModelPathEnsemble))
+                _fileProvider.DeleteDirectory(mlWeeklyModelPathEnsemble);
+            _fileProvider.CreateDirectory(mlWeeklyModelPathEnsemble);
+
+            #endregion
+        }
         public async Task<Dictionary<int, int>> CreateCategoryMappingSubToRoot()
         {
             var categoryMappingSubToRoot = new Dictionary<int, int>();
@@ -223,6 +279,86 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             }
 
             return avgPriceMap;
+        }
+        private async Task<List<CategoryTotalSelling>> TopSellingCategories()
+        {
+            var categorySubToRoot = await _staticCacheManager.GetAsync(SalesForecastingDefaults.CategorySubToRootMappingCacheKey, CreateCategoryMappingSubToRoot);
+            var query = from oi in _orderItemRepository.Table
+                        join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
+                        where o.OrderTotal != 0
+                        select new CategoryTotalTempSelling
+                        {
+                            CategoryId = pc.CategoryId,
+                            OrderTotal = (float)o.OrderTotal,
+                            OrderDate = o.CreatedOnUtc.Date
+                        };
+
+            var queryResult = await query.ToListAsync();
+            queryResult.ForEach(x => x.CategoryId = categorySubToRoot[x.CategoryId]);
+            var monthlyCategoryWiseSales = queryResult.GroupBy(x => new {x.OrderDate.Year,x.OrderDate.Month,x.CategoryId })
+                .Select(g => new CategoryTotalSelling
+                {  
+                    CategoryId = g.Key.CategoryId,
+                    CumulativeOrderTotal = (float)g.Sum(x => x.OrderTotal)
+                });
+            var categoryAvgSalesPerMonth = monthlyCategoryWiseSales.GroupBy(x => new { x.CategoryId })
+                .Select(g => new CategoryTotalSelling
+                {
+                    CategoryId = g.Key.CategoryId,
+                    CumulativeOrderTotal = g.Sum(x => x.CumulativeOrderTotal) / g.Count()
+                }).ToList();
+            categoryAvgSalesPerMonth.Sort((a, b) => {
+                if (a.CumulativeOrderTotal >= b.CumulativeOrderTotal)
+                    return 1;
+                else
+                    return 0;
+            });
+            var userPreferedBestCategoryCount = 5;
+            return categoryAvgSalesPerMonth.Take(userPreferedBestCategoryCount).ToList();
+        }
+        private async Task<List<LocationSpecificData>> TopOrderingLocations()
+        {
+            var query = from aslw in (from oad in (from od in (from oi in _orderItemRepository.Table
+                                                               join o in _orderRepository.Table on oi.OrderId equals o.Id
+                                                               join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
+                                                               where o.OrderTotal != 0
+                                                               select new LocationSpecificTempData
+                                                               {
+                                                                   BillingAddressId = o.BillingAddressId,
+                                                                   OrderTotal = (float)o.OrderTotal,
+                                                                   OrderDate = o.CreatedOnUtc.Date
+                                                               })
+                                                   join ad in _addressRepository.Table on od.BillingAddressId equals ad.Id
+                                                   select new LocationSpecificTempData
+                                                   {
+                                                       CountryId = od.CountryId,
+                                                       OrderDate = od.OrderDate,
+                                                       OrderTotal = od.OrderTotal
+                                                   })
+                                      group oad by new { oad.OrderDate.Value.Year, oad.OrderDate.Value.Month, oad.CountryId } into goad
+                                      select new LocationSpecificTempData
+                                      {
+                                          CountryId = (int)goad.Key.CountryId,
+                                          LocationTotalSales = (float)goad.Sum(x => x.OrderTotal)
+                                      })
+                        group aslw by new { aslw.CountryId } into gaslw
+                        select new LocationSpecificData
+                        {
+                            CountryId = (int)gaslw.Key.CountryId,
+                            LocationAvgSales = (float)gaslw.Sum(x => x.LocationTotalSales) / gaslw.Count()
+                        };
+            
+            var monthlyLocationWiseAvgSales = await query.ToListAsync();
+            monthlyLocationWiseAvgSales.Sort((a, b) =>
+            {
+                if (a.LocationAvgSales > b.LocationAvgSales)
+                    return 1;
+                else
+                    return 0;
+            });
+            var userPreferedBestLocationCount = 5;
+            return monthlyLocationWiseAvgSales.Take(userPreferedBestLocationCount).ToList();
         }
         private string CategoryGroupModelName(List<CategoryAvgPrice> categoryAvgPrices)
         {
@@ -407,11 +543,15 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             var categoryAvgPrices = await _staticCacheManager.GetAsync(SalesForecastingDefaults.RootCategoryAvgPricesCacheKey, RootCategoryAvgPrices);
 
+            var topSellingCategories = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopSellingCategoriesCacheKey, TopSellingCategories);
+
+            var bestCategories = topSellingCategories.Select(c => c.CategoryId).ToList();
+
             var query = from oi in _orderItemRepository.Table
                         join o in _orderRepository.Table on oi.OrderId equals o.Id
                         join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
                         where o.OrderTotal != 0
-                        select new CategoryBaseTempModelData
+                        select new TemporaryBaseModelData
                         {
                             Year = o.CreatedOnUtc.Date.Year,
                             Month = o.CreatedOnUtc.Date.Month,
@@ -423,36 +563,116 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             queryResult.ForEach(x => x.CategoryId = categorySubToRoot[(int)x.CategoryId]);
 
-            var groupedResult = queryResult
-                .GroupBy(x => new { x.Year, x.Month, x.CategoryId })
-                .Select(g => new CategoryBaseTempModelData
+            var categoryWiseFilteredResult = queryResult.Where(x => bestCategories.Contains((int)x.CategoryId));
+
+            var categoryWiseMonthlySales = categoryWiseFilteredResult.GroupBy(x => new { x.Year, x.Month, x.CategoryId })
+                .Select(g => new TemporaryBaseModelData
                 {
-                    Year = g.Key.Year,
-                    Month = g.Key.Month,
-                    CategoryId = g.Key.CategoryId,
-                    Avg = g.Sum(x => x.Unit) / g.Count(),
-                    Max = g.Max(x => x.Unit),
-                    Min = g.Min(x => x.Unit),
-                    CategoryAvgPrice = categoryAvgPrices[(int)g.Key.CategoryId],
-                    OrderTotal = g.Sum(x => x.OrderTotal),
+                    CategoryId = (int)g.Key.CategoryId,
                     Unit = g.Sum(x => x.Unit)
-                })
-                .ToList();
-            var finalResut = groupedResult.Select((x, index) => new CategoryBaseModelData
+                }).ToList().OrderBy(x => x.CategoryId).ToList();
+            var categoryWiseMonthlySalesWithLabel = categoryWiseMonthlySales.Select((x, index) => new CategoryBaseModelData
             {
-                Year = (int)x.Year,
-                Month = (int)x.Month,
-                Avg = (float)x.Avg, 
-                Max = (float)x.Max,
-                Min = (float)x.Min,
-                CategoryAvgPrice = (float)x.CategoryAvgPrice, 
-                CategoryId = (int)x.CategoryId, 
-                UnitsSoldCurrent = (float)x.Unit, 
-                UnitsSoldPrev = index > 0 ? (float)groupedResult[index - 1].Unit : 0, 
-                Next = index < groupedResult.Count - 1 ? (float)groupedResult[index + 1].Unit : 0
-            });
-            return finalResut.ToList();
+                CategoryId = (int)x.CategoryId,
+                UnitsSoldCurrent = (float)x.Unit,
+                UnitsSoldPrev = (index > 0 && categoryWiseMonthlySales[index - 1].CategoryId == x.CategoryId) ? (float)categoryWiseMonthlySales[index - 1].Unit : 0,
+                Next = (index < categoryWiseMonthlySales.Count - 1 && categoryWiseMonthlySales[index + 1].CategoryId == x.CategoryId) ? (float)categoryWiseMonthlySales[index + 1].Unit : 0
+            }).ToList();
+
+            MiscHelpers.Shuffle(categoryWiseMonthlySalesWithLabel);
+
+            return categoryWiseMonthlySalesWithLabel;
         }
+        private async Task<List<CategoryAvgPriceBaseModelData>> CategoryAvgPriceBaseModelSalesHistory()
+        {
+            var categorySubToRoot = await _staticCacheManager.GetAsync(SalesForecastingDefaults.CategorySubToRootMappingCacheKey, CreateCategoryMappingSubToRoot);
+
+            var categoryAvgPrices = await _staticCacheManager.GetAsync(SalesForecastingDefaults.RootCategoryAvgPricesCacheKey, RootCategoryAvgPrices);
+
+            var topSellingCategories = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopSellingCategoriesCacheKey, TopSellingCategories);
+
+            var bestCategories = topSellingCategories.Select(c => c.CategoryId).ToList();
+
+            var query = from oi in _orderItemRepository.Table
+                        join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
+                        where o.OrderTotal != 0
+                        select new TemporaryBaseModelData
+                        {
+                            Year = o.CreatedOnUtc.Date.Year,
+                            Month = o.CreatedOnUtc.Date.Month,
+                            CategoryId = pc.CategoryId,
+                            OrderTotal = (float)o.OrderTotal,
+                            Unit = oi.Quantity
+                        };
+            var queryResult = await query.ToListAsync();
+
+            queryResult.ForEach(x => x.CategoryId = categorySubToRoot[(int)x.CategoryId]);
+
+            var categoryWiseFilteredResult = queryResult.Where(x => bestCategories.Contains((int)x.CategoryId));
+
+            var categoryWiseMonthlySales = categoryWiseFilteredResult.GroupBy(x => new { x.Year, x.Month, x.CategoryId })
+                .Select(g => new TemporaryBaseModelData
+                {
+                    CategoryId = (int)g.Key.CategoryId,
+                    Unit = g.Sum(x => x.Unit)
+                }).ToList().OrderBy(x => x.CategoryId).ToList();
+            var categoryWiseMonthlySalesWithLabel = categoryWiseMonthlySales.Select((x, index) => new CategoryAvgPriceBaseModelData
+            {
+                CategoryId = (int)x.CategoryId,
+                CategoryAvgPrice = categoryAvgPrices[(int)x.CategoryId],
+                UnitsSoldCurrent = (float)x.Unit,
+                UnitsSoldPrev = (index > 0 && categoryWiseMonthlySales[index - 1].CategoryId == x.CategoryId) ? (float)categoryWiseMonthlySales[index - 1].Unit : 0,
+                Next = (index < categoryWiseMonthlySales.Count - 1 && categoryWiseMonthlySales[index + 1].CategoryId == x.CategoryId) ? (float)categoryWiseMonthlySales[index + 1].Unit : 0
+            }).ToList();
+
+            MiscHelpers.Shuffle(categoryWiseMonthlySalesWithLabel);
+
+            return categoryWiseMonthlySalesWithLabel;
+        }
+        private async Task<List<LocationBaseModelData>> LocationBaseModelSalesHistory()
+        {
+            var topOrderingLocations = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopOrderingLocationsCacheKey, TopOrderingLocations);
+
+            var bestLocations = topOrderingLocations.Select(c => c.CountryId).ToList();
+
+            var query = from oi in _orderItemRepository.Table
+                        join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
+                        where o.OrderTotal != 0
+                        join ad in _addressRepository.Table on o.BillingAddressId equals ad.Id
+                        select new TemporaryBaseModelData
+                        {
+                            Year = o.CreatedOnUtc.Date.Year,
+                            Month = o.CreatedOnUtc.Date.Month,
+                            CountryId = ad.CountryId,
+                            OrderTotal = (float)o.OrderTotal,
+                            Unit = oi.Quantity
+                        };
+            var queryResult = await query.ToListAsync();
+            var locationWiseFilteredResult = queryResult.Where(x => bestLocations.Contains((int)x.CountryId)).ToList();
+            var locationWiseMonthlySales = locationWiseFilteredResult.GroupBy(x => new { x.Year, x.Month, x.CountryId })
+                .Select(g => new TemporaryBaseModelData
+                {
+                    CategoryId = (int)g.Key.CountryId,
+                    Unit = g.Sum(x => x.Unit)
+                }).ToList().OrderBy(x => x.CategoryId).ToList();
+            var locationWiseMonthlySalesWithLabel = locationWiseMonthlySales.Select((x, index) => new LocationBaseModelData
+            {
+                CountryId = (int)x.CountryId,
+                UnitsSoldCurrent = (float)x.Unit,
+                UnitsSoldPrev = (index > 0 && locationWiseMonthlySales[index - 1].CountryId == x.CountryId) ? (float)locationWiseMonthlySales[index - 1].Unit : 0,
+                Next = (index < locationWiseMonthlySales.Count - 1 && locationWiseMonthlySales[index + 1].CountryId == x.CountryId) ? (float)locationWiseMonthlySales[index + 1].Unit : 0
+            }).ToList();
+
+            MiscHelpers.Shuffle(locationWiseMonthlySalesWithLabel);
+
+            return locationWiseMonthlySalesWithLabel;
+        }
+
+        #endregion
+
+        #region Ensemble Model Training Data Preparation Utilities
 
         #endregion
 
@@ -711,22 +931,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             // save the group in cache
             await _staticCacheManager.SetAsync(_staticCacheManager.PrepareKeyForDefaultCache(SalesForecastingDefaults.CategoryGroupsCacheKey), categoryGroups);
 
-            // clean up the directories 
-            var mLModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathTimeSeries);
-            if (_fileProvider.DirectoryExists(mLModelPath))
-                _fileProvider.DeleteDirectory(mLModelPath);
-            _fileProvider.CreateDirectory(mLModelPath);
-
-            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathTimeSeries);
-            if (_fileProvider.DirectoryExists(mlMonthlyModelPath))
-                _fileProvider.DeleteDirectory(mlMonthlyModelPath);
-            _fileProvider.CreateDirectory(mlMonthlyModelPath);
-
             var mlWeeklyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathTimeSeries);
-            if (_fileProvider.DirectoryExists(mlWeeklyModelPath))
-                _fileProvider.DeleteDirectory(mlWeeklyModelPath);
-            _fileProvider.CreateDirectory(mlWeeklyModelPath);
-
             foreach (var categoryGroup in categoryGroups)
             {
                 // get data for each category group 
@@ -760,24 +965,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             var productSalesHistory = await ProductSalesHistoryQuery();
 
-            //var productHistory = await GetProductHistoryDataAsync();
-
-            // clean up the directories 
-            var mLModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathRegression);
-            if (_fileProvider.DirectoryExists(mLModelPath))
-                _fileProvider.DeleteDirectory(mLModelPath);
-            _fileProvider.CreateDirectory(mLModelPath);
-
-            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathRegression);
-            if (_fileProvider.DirectoryExists(mlMonthlyModelPath))
-                _fileProvider.DeleteDirectory(mlMonthlyModelPath);
-            _fileProvider.CreateDirectory(mlMonthlyModelPath);
-
             var mlWeeklyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathRegression);
-            if (_fileProvider.DirectoryExists(mlWeeklyModelPath))
-                _fileProvider.DeleteDirectory(mlWeeklyModelPath);
-            _fileProvider.CreateDirectory(mlWeeklyModelPath);
-
             var outputPathToSaveModel = _fileProvider.Combine(mlWeeklyModelPath, SalesForecastingDefaults.RegressionProductSalesFastTreeWeedieModelName);
 
             ForecastingModelHelper.TrainAndSaveLargeFeatureRegressionProductSalesForecastingModel(_mlContext, productSalesHistory, outputPathToSaveModel);
@@ -795,23 +983,11 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             var productSalesHistory = await CategoryBaseModelSalesHistory();
 
-            // clean up the directories 
-            var mLModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathEnsemble);
-            if (_fileProvider.DirectoryExists(mLModelPath))
-                _fileProvider.DeleteDirectory(mLModelPath);
-            _fileProvider.CreateDirectory(mLModelPath);
-
             var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
-            if (_fileProvider.DirectoryExists(mlMonthlyModelPath))
-                _fileProvider.DeleteDirectory(mlMonthlyModelPath);
-            _fileProvider.CreateDirectory(mlMonthlyModelPath);
-
-            var mlWeeklyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathEnsemble);
-            if (_fileProvider.DirectoryExists(mlWeeklyModelPath))
-                _fileProvider.DeleteDirectory(mlWeeklyModelPath);
-            _fileProvider.CreateDirectory(mlWeeklyModelPath);
-
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryWiseBaseModel);
+
+            // save the training data to a csv file 
+            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
             ForecastingModelHelper.TrainAndSaveCategoryWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
 
@@ -821,35 +997,21 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         }
 
         #endregion
-
+        
         #region Base Location Model Methods
         public async Task<(bool, string)> TrainBaseLocationWiseProductSalesPredictionModelAsync(bool logInfo = false)
         {
             var sucess = false;
 
-            var productSalesHistory = await ProductSalesHistoryQuery();
+            var productSalesHistory = await LocationBaseModelSalesHistory();
 
-            //var productHistory = await GetProductHistoryDataAsync();
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesLocationWiseBaseModel);
 
-            // clean up the directories 
-            var mLModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathRegression);
-            if (_fileProvider.DirectoryExists(mLModelPath))
-                _fileProvider.DeleteDirectory(mLModelPath);
-            _fileProvider.CreateDirectory(mLModelPath);
+            // save the training data to a csv file 
+            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
-            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathRegression);
-            if (_fileProvider.DirectoryExists(mlMonthlyModelPath))
-                _fileProvider.DeleteDirectory(mlMonthlyModelPath);
-            _fileProvider.CreateDirectory(mlMonthlyModelPath);
-
-            var mlWeeklyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelWeeklyPredictionPathRegression);
-            if (_fileProvider.DirectoryExists(mlWeeklyModelPath))
-                _fileProvider.DeleteDirectory(mlWeeklyModelPath);
-            _fileProvider.CreateDirectory(mlWeeklyModelPath);
-
-            var outputPathToSaveModel = _fileProvider.Combine(mlWeeklyModelPath, SalesForecastingDefaults.RegressionProductSalesFastTreeWeedieModelName);
-
-            ForecastingModelHelper.TrainAndSaveLargeFeatureRegressionProductSalesForecastingModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            ForecastingModelHelper.TrainAndSaveLocationWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
 
             sucess = true;
 
@@ -858,6 +1020,34 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         #endregion
 
+        #region Base Category and Category Avg.Prices Model Methods
+        public async Task<(bool, string)> TrainBaseCategoryAvgPriceWiseProductSalesPredictionModelAsync(bool logInfo = false)
+        {
+            var sucess = false;
+
+            var productSalesHistory = await CategoryAvgPriceBaseModelSalesHistory();
+
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryAvgPriceWiseBaseModel);
+
+            // save the training data to a csv file 
+            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+
+            ForecastingModelHelper.TrainAndSaveAveragePriceWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+
+            sucess = true;
+
+            return (sucess, string.Empty);
+        }
+
+        #endregion
+
+        #region Base Month Wise Model Methods
+        public async Task<(bool, string)> TrainBaseMonthWiseProductSalesPredictionModelAsync(bool logInfo = false)
+        {
+        }
+        #endregion
+        
         #region Ensemble Model Methods
         public async Task<(bool, string)> TrainEnsembleMetaModelAsync(bool logInfo = false)
         {

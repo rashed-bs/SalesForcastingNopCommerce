@@ -117,11 +117,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
             var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
 
-            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryBaseModelData.CategoryAvgPrice), nameof(CategoryBaseModelData.Avg), nameof(CategoryBaseModelData.Min), nameof(CategoryBaseModelData.Max), nameof(CategoryBaseModelData.UnitsSoldCurrent), nameof(CategoryBaseModelData.UnitsSoldPrev))
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryBaseModelData.UnitsSoldCurrent), nameof(CategoryBaseModelData.UnitsSoldPrev))
                 .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "CategoryFeatures", inputColumnName: nameof(CategoryBaseModelData.CategoryId)))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "YearFeatures", inputColumnName: nameof(CategoryBaseModelData.Year)))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "MonthFeatures", inputColumnName: nameof(CategoryBaseModelData.Month)))
-                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CategoryFeatures", "YearFeatures", "MonthFeatures"))
+                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CategoryFeatures"))
                 .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(CategoryBaseModelData.Next)))
                 .Append(trainer);
 
@@ -137,9 +135,55 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
         #endregion
 
         #region Base Location Wise Model
+        public static void TrainAndSaveLocationWiseBaseModel(MLContext mlContext, List<LocationBaseModelData> productSalesHistory, string outputModelPath)
+        {
+            var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
+
+            var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
+
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(LocationBaseModelData.UnitsSoldCurrent), nameof(LocationBaseModelData.UnitsSoldPrev))
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "CountryFeatures", inputColumnName: nameof(LocationBaseModelData.CountryId)))
+                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CountryFeatures"))
+                .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(LocationBaseModelData.Next)))
+                .Append(trainer);
+
+            var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
+
+            // Train the model.
+            var model = trainingPipeline.Fit(trainingDataView);
+
+            // Save the model for later comsumption from end-user apps.
+            mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+        }
         #endregion
 
-        #region Ensemble Location Wise Model
+        #region Base Category Avg Price Wise Model
+        public static void TrainAndSaveAveragePriceWiseBaseModel(MLContext mlContext, List<CategoryAvgPriceBaseModelData> productSalesHistory, string outputModelPath)
+        {
+            var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
+
+            var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
+
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryAvgPriceBaseModelData.UnitsSoldCurrent),, nameof(CategoryAvgPriceBaseModelData.CategoryAvgPrice))
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "CategoryFeatures", inputColumnName: nameof(CategoryAvgPriceBaseModelData.CategoryId)))
+                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CategoryFeatures"))
+                .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(CategoryAvgPriceBaseModelData.Next)))
+                .Append(trainer);
+
+            var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
+
+            // Train the model.
+            var model = trainingPipeline.Fit(trainingDataView);
+
+            // Save the model for later comsumption from end-user apps.
+            mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+        }
+        #endregion
+
+        #region Base Month Wise Model
+        #endregion
+
+        #region Ensemble Model
         #endregion
     }
 }

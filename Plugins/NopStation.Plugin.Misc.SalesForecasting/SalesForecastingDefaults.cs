@@ -34,7 +34,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting
         public static string ProductSalesCategoryWiseBaseModel => "Product_Category_Wise_Base_Model";
 
         public static string ProductSalesLocationWiseBaseModel => "Product_Location_Wise_Base_Model";
-
+        public static string ProductSalesCategoryAvgPriceWiseBaseModel => "Product_Category_AvgPrice_Wise_Base_Model";
+        public static string ProductSalesMonthWiseBaseModel => "Product_Month_Wise_Base_Model";
         public static string RegressionProductSalesFastTreeWeedieModelName => "Product_Sales_Regression_fastTreeTweedie";
 
         public static string RegressionProductForecastingModelPath => "product_month_fastTreeTweedie.zip";
@@ -48,6 +49,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting
         public static CacheKey CategoryGroupsCacheKey => new("CategoryGroupsCacheKey"); 
         public static CacheKey CategorySubToRootMappingCacheKey => new("CategorySubToRootMappingCacheKey"); 
         public static CacheKey RootCategoryAvgPricesCacheKey => new("RootCategoryAvgPricesCacheKey"); 
+        public static CacheKey TopSellingCategoriesCacheKey => new("RootCategoryAvgPricesCacheKey");
+        public static CacheKey TopOrderingLocationsCacheKey => new("TopOrderingLocationsCacheKey");
         public static string SalesForecastingProductDataPrefix => "NopStation.Plugin.Misc.SalesForecasting.ProductData.";
 
     }

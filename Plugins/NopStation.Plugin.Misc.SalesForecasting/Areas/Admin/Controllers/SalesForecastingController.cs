@@ -147,6 +147,10 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
             if(!largeDataSet)
             {
+                #region Model Directory Preparation
+                _salesForecastingService.PathPreparation();
+                #endregion
+
                 #region Train Monthly Product Sales Prediction Base Model (Category specific-Building block of Ensemble learning)
 
                 var categoryWiseBaseModelStatus = await _salesForecastingService.TrainBaseCategoryWiseProductSalesPredictionModelAsync();

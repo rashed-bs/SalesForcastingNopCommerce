@@ -19,6 +19,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         Task<(bool, string)> TrainEnsembleMetaModelAsync(bool logInfo = false);
 
-
+        public void PathPreparation();
     }
 }
