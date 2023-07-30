@@ -30,6 +30,14 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
         public float UnitsSoldPrev { get; set; }
         public float Next { get; set; }
     }
+    
+    public class MonthBaseModelData
+    {
+        public int Month { get; set; }
+        public float UnitsSoldCurrent { get; set; }
+        public float UnitsSoldPrev { get; set; }
+        public float Next { get; set; }
+    }
 
     public class TemporaryBaseModelData
     {

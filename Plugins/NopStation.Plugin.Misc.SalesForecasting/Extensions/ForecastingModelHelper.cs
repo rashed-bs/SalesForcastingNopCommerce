@@ -164,7 +164,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
             var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
 
-            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryAvgPriceBaseModelData.UnitsSoldCurrent),, nameof(CategoryAvgPriceBaseModelData.CategoryAvgPrice))
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryAvgPriceBaseModelData.UnitsSoldCurrent), nameof(CategoryAvgPriceBaseModelData.UnitsSoldPrev), nameof(CategoryAvgPriceBaseModelData.CategoryAvgPrice))
                 .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "CategoryFeatures", inputColumnName: nameof(CategoryAvgPriceBaseModelData.CategoryId)))
                 .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CategoryFeatures"))
                 .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(CategoryAvgPriceBaseModelData.Next)))
@@ -181,6 +181,26 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
         #endregion
 
         #region Base Month Wise Model
+        public static void TrainAndSaveMonthWiseBaseModel(MLContext mlContext, List<MonthBaseModelData> productSalesHistory, string outputModelPath)
+        {
+            var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
+
+            var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
+
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(MonthBaseModelData.UnitsSoldCurrent),nameof(MonthBaseModelData.UnitsSoldPrev))
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "MonthFeatures", inputColumnName: nameof(MonthBaseModelData.Month)))
+                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "MonthFeatures"))
+                .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(MonthBaseModelData.Next)))
+                .Append(trainer);
+
+            var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
+
+            // Train the model.
+            var model = trainingPipeline.Fit(trainingDataView);
+
+            // Save the model for later comsumption from end-user apps.
+            mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+        }
         #endregion
 
         #region Ensemble Model

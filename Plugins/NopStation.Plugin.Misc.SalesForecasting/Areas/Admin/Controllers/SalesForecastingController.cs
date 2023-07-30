@@ -116,6 +116,10 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
             bool largeDataSet = false;
 
+            #region Model Directory Preparation
+            _salesForecastingService.PathPreparation();
+            #endregion
+
             #region Train Sales Prediction Model 
             var trainWeeklyTimeSeriesModelStatus = await _salesForecastingService.TrainWeeklySalesPredictionModelAsync();
 
@@ -147,9 +151,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
             if(!largeDataSet)
             {
-                #region Model Directory Preparation
-                _salesForecastingService.PathPreparation();
-                #endregion
 
                 #region Train Monthly Product Sales Prediction Base Model (Category specific-Building block of Ensemble learning)
 
@@ -169,7 +170,27 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
                     _notificationService.ErrorNotification("Training of Location-Base model failed");
                 #endregion
 
-                #region Train Ensemble learning)
+                #region Train Monthly Product Sales Prediction Base Model (Category Avg Price specific-Building block of Ensemble learning)
+                var categoryAvgPriceWiseBaseModelStatus = await _salesForecastingService.TrainBaseCategoryAvgPriceWiseProductSalesPredictionModelAsync();
+                if (categoryAvgPriceWiseBaseModelStatus.Item1)
+                    _notificationService.SuccessNotification("Training of Category-Avg Price Base model successfull");
+                else
+                    _notificationService.ErrorNotification("Training of Category-Avg Price model failed");
+                #endregion
+
+                #region Train Monthly Product Sales Prediction Base Model (Month specific-Building block of Ensemble learning)
+                var monthWiseBaseModelStatus = await _salesForecastingService.TrainBaseMonthWiseProductSalesPredictionModelAsync();
+                if (monthWiseBaseModelStatus.Item1)
+                    _notificationService.SuccessNotification("Training of Month wise Base model successfull");
+                else
+                    _notificationService.ErrorNotification("Training of Month wise Base model failed");
+                #endregion
+
+                #region DataSet Preparation for ensemble learning
+
+                #endregion
+
+                #region Train Ensemble learning
                 var trainEnsembleMetaModelStatus = await _salesForecastingService.TrainEnsembleMetaModelAsync();
                 if (trainEnsembleMetaModelStatus.Item1)
                     _notificationService.SuccessNotification("Training of Ensemble Meta model successfull");

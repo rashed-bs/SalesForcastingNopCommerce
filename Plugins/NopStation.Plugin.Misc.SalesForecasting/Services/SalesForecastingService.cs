@@ -62,6 +62,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 ICategoryService categoryService,
                 IStoreContext storeContext,
                 IProductService productService,
+                IRepository<Address> addressRepository,
                 SalesForecastingSettings inventoryPredictionSettings,
                 ILogger logger)
             {
@@ -76,6 +77,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 _categoryService = categoryService;
                 _storeContext = storeContext;
                 _productService = productService;
+                _addressRepository = addressRepository;
                 _discountService = discountService;
                 _inventoryPredictionSettings = inventoryPredictionSettings;
                 _logger = logger;
@@ -319,46 +321,29 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         }
         private async Task<List<LocationSpecificData>> TopOrderingLocations()
         {
-            var query = from aslw in (from oad in (from od in (from oi in _orderItemRepository.Table
-                                                               join o in _orderRepository.Table on oi.OrderId equals o.Id
-                                                               join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
-                                                               where o.OrderTotal != 0
-                                                               select new LocationSpecificTempData
-                                                               {
-                                                                   BillingAddressId = o.BillingAddressId,
-                                                                   OrderTotal = (float)o.OrderTotal,
-                                                                   OrderDate = o.CreatedOnUtc.Date
-                                                               })
-                                                   join ad in _addressRepository.Table on od.BillingAddressId equals ad.Id
-                                                   select new LocationSpecificTempData
-                                                   {
-                                                       CountryId = od.CountryId,
-                                                       OrderDate = od.OrderDate,
-                                                       OrderTotal = od.OrderTotal
-                                                   })
-                                      group oad by new { oad.OrderDate.Value.Year, oad.OrderDate.Value.Month, oad.CountryId } into goad
-                                      select new LocationSpecificTempData
-                                      {
-                                          CountryId = (int)goad.Key.CountryId,
-                                          LocationTotalSales = (float)goad.Sum(x => x.OrderTotal)
-                                      })
-                        group aslw by new { aslw.CountryId } into gaslw
+            var query = from c in (from a in _orderRepository.Table
+                                   join b in _addressRepository.Table on a.BillingAddressId equals b.Id
+                                   select new
+                                   {
+                                       a.OrderTotal,
+                                       b.CountryId
+                                   })
+                        group c by new { c.CountryId } into gc
                         select new LocationSpecificData
                         {
-                            CountryId = (int)gaslw.Key.CountryId,
-                            LocationAvgSales = (float)gaslw.Sum(x => x.LocationTotalSales) / gaslw.Count()
+                            CountryId = (int)gc.Key.CountryId,
+                            LocationAvgSales = (float)gc.Sum(x => x.OrderTotal) / gc.Count()
                         };
-            
-            var monthlyLocationWiseAvgSales = await query.ToListAsync();
-            monthlyLocationWiseAvgSales.Sort((a, b) =>
+            var queryResult = await query.ToListAsync();
+            /*queryResult.Sort((a, b) =>
             {
-                if (a.LocationAvgSales > b.LocationAvgSales)
+                if (a.LocationAvgSales >= b.LocationAvgSales)
                     return 1;
                 else
                     return 0;
             });
-            var userPreferedBestLocationCount = 5;
-            return monthlyLocationWiseAvgSales.Take(userPreferedBestLocationCount).ToList();
+            return queryResult.Take(5).ToList();*/
+            return queryResult;
         }
         private string CategoryGroupModelName(List<CategoryAvgPrice> categoryAvgPrices)
         {
@@ -385,7 +370,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             categoryAvgPrices.Sort((x, y) => x.AvgPrice.CompareTo(y.AvgPrice));
 
             // Group categories based on the difference in average prices
-            var ThresholdPrice = 50;
+            var thresholdPrice = 50;
             var categoryGroups = new List<List<CategoryAvgPrice>>();
             var currentGroup = new List<CategoryAvgPrice> { categoryAvgPrices[0] };
 
@@ -395,7 +380,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 var previousCategory = categoryAvgPrices[i - 1];
                 var priceDifference = Math.Abs(currentCategory.AvgPrice - previousCategory.AvgPrice);
 
-                if (priceDifference > ThresholdPrice)
+                if (priceDifference > thresholdPrice)
                 {
                     // Create a new group when the difference is greater than the threshold
                     categoryGroups.Add(currentGroup);
@@ -632,15 +617,14 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         }
         private async Task<List<LocationBaseModelData>> LocationBaseModelSalesHistory()
         {
-            var topOrderingLocations = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopOrderingLocationsCacheKey, TopOrderingLocations);
+            //var topOrderingLocations = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopOrderingLocationsCacheKey, TopOrderingLocations);
 
-            var bestLocations = topOrderingLocations.Select(c => c.CountryId).ToList();
+            //var bestLocations = topOrderingLocations.Select(c => c.CountryId).ToList();
 
             var query = from oi in _orderItemRepository.Table
                         join o in _orderRepository.Table on oi.OrderId equals o.Id
-                        join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
-                        where o.OrderTotal != 0
                         join ad in _addressRepository.Table on o.BillingAddressId equals ad.Id
+                        where o.OrderTotal != 0
                         select new TemporaryBaseModelData
                         {
                             Year = o.CreatedOnUtc.Date.Year,
@@ -650,11 +634,11 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                             Unit = oi.Quantity
                         };
             var queryResult = await query.ToListAsync();
-            var locationWiseFilteredResult = queryResult.Where(x => bestLocations.Contains((int)x.CountryId)).ToList();
-            var locationWiseMonthlySales = locationWiseFilteredResult.GroupBy(x => new { x.Year, x.Month, x.CountryId })
+            //var locationWiseFilteredResult = queryResult.Where(x => bestLocations.Contains((int)x.CountryId)).ToList();
+            var locationWiseMonthlySales = queryResult.GroupBy(x => new { x.Year, x.Month, x.CountryId })
                 .Select(g => new TemporaryBaseModelData
                 {
-                    CategoryId = (int)g.Key.CountryId,
+                    CountryId = (int)g.Key.CountryId,
                     Unit = g.Sum(x => x.Unit)
                 }).ToList().OrderBy(x => x.CategoryId).ToList();
             var locationWiseMonthlySalesWithLabel = locationWiseMonthlySales.Select((x, index) => new LocationBaseModelData
@@ -668,6 +652,37 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             MiscHelpers.Shuffle(locationWiseMonthlySalesWithLabel);
 
             return locationWiseMonthlySalesWithLabel;
+        }
+        private async Task<List<MonthBaseModelData>> CategoryMonthBaseModelSalesHistory()
+        {
+            var query = from goi in (from oi in _orderItemRepository.Table
+                                     join o in _orderRepository.Table on oi.OrderId equals o.Id
+                                     where o.OrderTotal != 0
+                                     select new TemporaryBaseModelData
+                                     {
+                                         Year = o.CreatedOnUtc.Date.Year,
+                                         Month = o.CreatedOnUtc.Date.Month,
+                                         OrderTotal = (float)o.OrderTotal,
+                                         Unit = oi.Quantity
+                                     })
+                        group goi by new { goi.Year, goi.Month } into ggoi
+                        select new MonthBaseModelData
+                        {
+                            Month = (int)ggoi.Key.Month, 
+                            UnitsSoldCurrent = (float)ggoi.Sum(x => x.Unit)
+                        };
+            var queryResult = await query.ToListAsync();
+            var monthWiseMonthlySalesWithLabel = queryResult.Select((x, index) => new MonthBaseModelData
+            {
+                Month = x.Month,
+                UnitsSoldCurrent = x.UnitsSoldCurrent,
+                UnitsSoldPrev = index > 0 ? (float)queryResult[index - 1].UnitsSoldCurrent : 0,
+                Next = index < queryResult.Count - 1  ? (float)queryResult[index + 1].UnitsSoldCurrent : 0
+            }).ToList();
+
+            MiscHelpers.Shuffle(monthWiseMonthlySalesWithLabel);
+
+            return monthWiseMonthlySalesWithLabel;
         }
 
         #endregion
@@ -1029,7 +1044,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryAvgPriceWiseBaseModel);
-
+            
             // save the training data to a csv file 
             CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
@@ -1045,6 +1060,21 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         #region Base Month Wise Model Methods
         public async Task<(bool, string)> TrainBaseMonthWiseProductSalesPredictionModelAsync(bool logInfo = false)
         {
+            var sucess = false;
+
+            var productSalesHistory = await CategoryMonthBaseModelSalesHistory();
+
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesMonthWiseBaseModel);
+
+            // save the training data to a csv file 
+            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+
+            ForecastingModelHelper.TrainAndSaveMonthWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+
+            sucess = true;
+
+            return (sucess, string.Empty);
         }
         #endregion
         
