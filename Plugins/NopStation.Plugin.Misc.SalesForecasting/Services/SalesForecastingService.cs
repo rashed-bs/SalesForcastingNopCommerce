@@ -621,12 +621,18 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             //var bestLocations = topOrderingLocations.Select(c => c.CountryId).ToList();
 
+            var topSellingCategories = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopSellingCategoriesCacheKey, TopSellingCategories);
+
+            var bestCategories = topSellingCategories.Select(c => c.CategoryId).ToList();
+
             var query = from oi in _orderItemRepository.Table
                         join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        join pc in _productCategoryRepository.Table on oi.ProductId equals pc.ProductId
                         join ad in _addressRepository.Table on o.BillingAddressId equals ad.Id
                         where o.OrderTotal != 0
                         select new TemporaryBaseModelData
                         {
+                            CategoryId = pc.CategoryId,
                             Year = o.CreatedOnUtc.Date.Year,
                             Month = o.CreatedOnUtc.Date.Month,
                             CountryId = ad.CountryId,
@@ -634,8 +640,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                             Unit = oi.Quantity
                         };
             var queryResult = await query.ToListAsync();
-            //var locationWiseFilteredResult = queryResult.Where(x => bestLocations.Contains((int)x.CountryId)).ToList();
-            var locationWiseMonthlySales = queryResult.GroupBy(x => new { x.Year, x.Month, x.CountryId })
+            var locationWiseFilteredResult = queryResult.Where(x => bestCategories.Contains((int)x.CategoryId)).ToList();
+            var locationWiseMonthlySales = locationWiseFilteredResult.GroupBy(x => new { x.Year, x.Month, x.CountryId })
                 .Select(g => new TemporaryBaseModelData
                 {
                     CountryId = (int)g.Key.CountryId,
