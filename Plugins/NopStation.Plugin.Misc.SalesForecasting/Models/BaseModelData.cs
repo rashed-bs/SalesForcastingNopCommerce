@@ -8,7 +8,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
 {
     public class CategoryBaseModelData
     {
-        public int CategoryId { get; set; }
+        public float CategoryId { get; set; }
         public float UnitsSoldCurrent { get; set; }
         public float UnitsSoldPrev { get; set; }
         public float Next { get; set; }
@@ -16,7 +16,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
 
     public class CategoryAvgPriceBaseModelData
     {
-        public int CategoryId { get; set; }
+        public float CategoryId { get; set; }
         public float CategoryAvgPrice { get; set; }
         public float UnitsSoldCurrent { get; set; }
         public float UnitsSoldPrev { get; set; }

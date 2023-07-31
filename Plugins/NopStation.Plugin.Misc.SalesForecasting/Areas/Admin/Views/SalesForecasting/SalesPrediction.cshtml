@@ -66,11 +66,121 @@
                         </div>
                     </div>
                 </div>
-                <div class="card card-primary card-outline @if (hideCard){ <text>collapsed-card</text> }" id="@(prefix)-card">
+                <div class="card card-primary card-outline @if (hideCard){
+                <text>collapsed-card</text>
+ }" id="@(prefix)-card">
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
-                            @T("Plugins.NopStation.InventoryPrediction.Report.PredictionStatistics")
+                            @T("Weekly Sales Prediction")
+                        </h3>
+                        <div class="card-tools float-right">
+                            <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
+                                @if (hideCard)
+                                {
+                                    <text><i class="fas fa-plus"></i></text>
+                                }
+                                else
+                                {
+                                    <text><i class="fas fa-minus"></i></text>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart" style="height: 300px;">
+                            <canvas id="@(prefix)-chart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-primary card-outline @if (hideCard){
+                <text>collapsed-card</text>
+}" id="@(prefix)-card">
+                    <div class="card-header with-border">
+                        <h3 class="card-title">
+                            <i class="far fa-user"></i>
+                            @T("Monthly sales prediction")
+                        </h3>
+                        <div class="card-tools float-right">
+                            <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
+                                @if (hideCard)
+                                {
+                                    <text><i class="fas fa-plus"></i></text>
+                                }
+                                else
+                                {
+                                    <text><i class="fas fa-minus"></i></text>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart" style="height: 300px;">
+                            <canvas id="@(prefix)-chart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-primary card-outline @if (hideCard){
+                <text>collapsed-card</text>
+ }" id="@(prefix)-card">
+                    <div class="card-header with-border">
+                        <h3 class="card-title">
+                            <i class="far fa-user"></i>
+                            @T("Sales Contribution of categories")
+                        </h3>
+                        <div class="card-tools float-right">
+                            <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
+                                @if (hideCard)
+                                {
+                                    <text><i class="fas fa-plus"></i></text>
+                                }
+                                else
+                                {
+                                    <text><i class="fas fa-minus"></i></text>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart" style="height: 300px;">
+                            <canvas id="@(prefix)-chart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-primary card-outline @if (hideCard){
+                <text>collapsed-card</text>
+ }" id="@(prefix)-card">
+                    <div class="card-header with-border">
+                        <h3 class="card-title">
+                            <i class="far fa-user"></i>
+                            @T("Location Wise Sales Prediction")
+                        </h3>
+                        <div class="card-tools float-right">
+                            <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
+                                @if (hideCard)
+                                {
+                                    <text><i class="fas fa-plus"></i></text>
+                                }
+                                else
+                                {
+                                    <text><i class="fas fa-minus"></i></text>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart" style="height: 300px;">
+                            <canvas id="@(prefix)-chart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-primary card-outline @if (hideCard){
+                <text>collapsed-card</text>
+ }" id="@(prefix)-card">
+                    <div class="card-header with-border">
+                        <h3 class="card-title">
+                            <i class="far fa-user"></i>
+                            @T("Sales Vs Stock")
                         </h3>
                         <div class="card-tools float-right">
                             <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
@@ -166,8 +276,6 @@
                     </div>
                 </div>
                 <script>
-
-
                     $(document).ready(function () {
 
                         $('#search-analysis').on('click', function () {
@@ -179,123 +287,122 @@
                             changeCsPeriod(model);
                         });
 
-                       var csConfig = {
-                           type: 'line',
-                           data: {
-                               labels: [],
-                               datasets: [
-                                   {
-                                       label: "@T("Plugins.NopStation.InventoryPrediction.Report.WeeklySalesQuantity")",
-                                       fillColor: "rgba(60,141,188,0.9)",
-                                       strokeColor: "rgba(60,141,188,0.8)",
-                                       pointColor: "#00a65a",
-                                       pointStrokeColor: "rgba(0,166,90,1)",
-                                       pointHighlightFill: "#fff",
-                                       pointHighlightStroke: "rgba(0,166,90,1)",
-                                       borderColor: 'rgba(0,166,90, 1)',
-                                       backgroundColor: 'rgba(0,166,90,0.5)',
-                                       pointBorderColor: 'rgba(0,166,90,0.7)',
-                                       pointBackgroundColor: 'rgba(0,166,90,0.2)',
-                                       pointBorderWidth: 1,
-                                       data: []
-                                   }
-                               ]
-                           },
-                           options: {
-                               legend: {
-                                   display: false
-                               },
-                               scales: {
-                                   xAxes: [{
-                                       display: true,
-                                       ticks: {
-                                           userCallback: function (dataLabel, index) {
-                                               if (window.customerStatistics && window.customerStatistics.config.data.labels.length > 12) {
-                                                   return index % 5 === 0 ? dataLabel : '';
-                                               }
-                                               return dataLabel;
-                                           }
-                                       },
+                        var csConfig = {
+                            type: 'line',
+                            data: {
+                                labels: [],
+                                datasets: [
+                                    {
+                                        label: "@T("Plugins.NopStation.InventoryPrediction.Report.WeeklySalesQuantity")",
+                                        fillColor: "rgba(60,141,188,0.9)",
+                                        strokeColor: "rgba(60,141,188,0.8)",
+                                        pointColor: "#00a65a",
+                                        pointStrokeColor: "rgba(0,166,90,1)",
+                                        pointHighlightFill: "#fff",
+                                        pointHighlightStroke: "rgba(0,166,90,1)",
+                                        borderColor: 'rgba(0,166,90, 1)',
+                                        backgroundColor: 'rgba(0,166,90,0.5)',
+                                        pointBorderColor: 'rgba(0,166,90,0.7)',
+                                        pointBackgroundColor: 'rgba(0,166,90,0.2)',
+                                        pointBorderWidth: 1,
+                                        data: []
+                                    }
+                                ]
+                            },
+                            options: {
+                                legend: {
+                                    display: false
+                                },
+                                scales: {
+                                    xAxes: [{
+                                        display: true,
+                                        ticks: {
+                                            userCallback: function (dataLabel, index) {
+                                                if (window.customerStatistics && window.customerStatistics.config.data.labels.length > 12) {
+                                                    return index % 5 === 0 ? dataLabel : '';
+                                                }
+                                                return dataLabel;
+                                            }
+                                        },
 
-                                   }],
-                                   yAxes: [{
-                                       display: true,
-                                       ticks: {
-                                           userCallback: function (dataLabel, index) {
-                                               return (dataLabel ^ 0) === dataLabel ? dataLabel : '';
-                                           },
-                                           min: 0
-                                       },
-                                   }],
+                                    }],
+                                    yAxes: [{
+                                        display: true,
+                                        ticks: {
+                                            userCallback: function (dataLabel, index) {
+                                                return (dataLabel ^ 0) === dataLabel ? dataLabel : '';
+                                            },
+                                            min: 0
+                                        },
+                                    }],
 
 
-                               },
-                               showScale: true,
-                               scaleShowGridLines: false,
-                               scaleGridLineColor: "rgba(0,0,0,.05)",
-                               scaleGridLineWidth: 1,
-                               scaleShowHorizontalLines: true,
-                               scaleShowVerticalLines: true,
-                               bezierCurve: true,
-                               pointDot: false,
-                               pointDotRadius: 4,
-                               pointDotStrokeWidth: 1,
-                               pointHitDetectionRadius: 20,
-                               datasetStroke: true,
-                               datasetFill: true,
-                               maintainAspectRatio: false,
-                               responsive: true,
-                           }
+                                },
+                                showScale: true,
+                                scaleShowGridLines: false,
+                                scaleGridLineColor: "rgba(0,0,0,.05)",
+                                scaleGridLineWidth: 1,
+                                scaleShowHorizontalLines: true,
+                                scaleShowVerticalLines: true,
+                                bezierCurve: true,
+                                pointDot: false,
+                                pointDotRadius: 4,
+                                pointDotStrokeWidth: 1,
+                                pointHitDetectionRadius: 20,
+                                datasetStroke: true,
+                                datasetFill: true,
+                                maintainAspectRatio: false,
+                                responsive: true,
+                            }
                         };
-                       function changeCsPeriod(model) {
-                           var csLabels = [];
-                           var csData = [];
-                           console.log("Model: ",model);
-                           $.ajax({
-                               cache: false,
-                               type: "GET",
-                               url: "/Admin/SalesForecasting/Analysis",
-                               data: {
-                                   CategoryId: model.CategoryId,
-                                   DiscountPercentage: model.DiscountPercentage,
-                                   ShippingCharge: model.ShippingCharge,
-                               },
-                               success: function (data, textStatus, jqXHR) {
-                                   $("#WeekId").attr('disabled', false);
-                                   $('#WeekId').empty();
-                                   for (var i = 0; i < data.length; i++) {
-                                       csLabels.push(data[i].WeekName);
-                                       csData.push(data[i].WeeklySalesQuantity);
-                                       $("#WeekId").append('<option value=' + data[i].WeekId + ' onchange=getBestProducts(' + data[i].WeekId +')>' + data[i].WeekName + '</option>');
-                                   }
+                        function changeCsPeriod(model) {
+                            var csLabels = [];
+                            var csData = [];
+                            console.log("Model: ", model);
+                            $.ajax({
+                                cache: false,
+                                type: "GET",
+                                url: "/Admin/SalesForecasting/Analysis",
+                                data: {
+                                    CategoryId: model.CategoryId,
+                                    DiscountPercentage: model.DiscountPercentage,
+                                    ShippingCharge: model.ShippingCharge,
+                                },
+                                success: function (data, textStatus, jqXHR) {
+                                    $("#WeekId").attr('disabled', false);
+                                    $('#WeekId').empty();
+                                    for (var i = 0; i < data.length; i++) {
+                                        csLabels.push(data[i].WeekName);
+                                        csData.push(data[i].WeeklySalesQuantity);
+                                        $("#WeekId").append('<option value=' + data[i].WeekId + ' onchange=getBestProducts(' + data[i].WeekId + ')>' + data[i].WeekName + '</option>');
+                                    }
 
-                                   if (!window.customerStatistics) {
-                                       csConfig.data.labels = csLabels;
-                                       csConfig.data.datasets[0].data = csData;
-                                       csConfig.data.scales =
-                                       window.customerStatistics = new Chart(document.getElementById("@prefix-chart").getContext("2d"), csConfig);
-                                   } else {
-                                       window.customerStatistics.config.data.labels = csLabels;
-                                       window.customerStatistics.config.data.datasets[0].data = csData;
-                                       window.customerStatistics.update();
-                                   }
-                               },
-                               error: function (jqXHR, textStatus, errorThrown) {
-                                   //$("#loadCustomerStatisticsAlert").click();
-                               }
-                           });
-                       }
+                                    if (!window.customerStatistics) {
+                                        csConfig.data.labels = csLabels;
+                                        csConfig.data.datasets[0].data = csData;
+                                        csConfig.data.scales =
+                                            window.customerStatistics = new Chart(document.getElementById("@prefix-chart").getContext("2d"), csConfig);
+                                    } else {
+                                        window.customerStatistics.config.data.labels = csLabels;
+                                        window.customerStatistics.config.data.datasets[0].data = csData;
+                                        window.customerStatistics.update();
+                                    }
+                                },
+                                error: function (jqXHR, textStatus, errorThrown) {
+                                    //$("#loadCustomerStatisticsAlert").click();
+                                }
+                            });
+                        }
 
                     @if (!hideCard)
                     {
                         <text>
-                                      $('#search-analysis').trigger('click');
+                                $('#search-analysis').trigger('click');
                         </text>
                     }
-                          }); 
+                                                                                      });
                 </script>
             </div>
         </div>
     </div>
 </section>
-

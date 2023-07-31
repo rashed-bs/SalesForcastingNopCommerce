@@ -14,6 +14,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models
         {
             AvailableCategory = new List<SelectListItem>();
             AvailableWeekItem = new List<SelectListItem>();
+            
         }
 
         public int CategoryId { get; set; }
@@ -23,5 +24,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models
 
         public IList<SelectListItem> AvailableCategory { get; set; }
         public IList<SelectListItem> AvailableWeekItem { get; set; }
+
+      
     }
 }

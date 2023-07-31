@@ -22,8 +22,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         Task<(bool, string)> TrainBaseMonthWiseProductSalesPredictionModelAsync(bool logInfo = false);
 
-        Task<(bool, string)> TrainEnsembleMetaModelAsync(bool logInfo = false);
-
         public void PathPreparation();
     }
 }

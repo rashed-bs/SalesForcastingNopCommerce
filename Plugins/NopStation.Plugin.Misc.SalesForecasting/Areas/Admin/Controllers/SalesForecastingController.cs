@@ -185,18 +185,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
                 else
                     _notificationService.ErrorNotification("Training of Month wise Base model failed");
                 #endregion
-
-                #region DataSet Preparation for ensemble learning
-
-                #endregion
-
-                #region Train Ensemble learning
-                var trainEnsembleMetaModelStatus = await _salesForecastingService.TrainEnsembleMetaModelAsync();
-                if (trainEnsembleMetaModelStatus.Item1)
-                    _notificationService.SuccessNotification("Training of Ensemble Meta model successfull");
-                else
-                    _notificationService.ErrorNotification("Training of Ensemble Meta model failed");
-                #endregion
             }
 
             #endregion
