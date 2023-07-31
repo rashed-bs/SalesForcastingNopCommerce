@@ -5,7 +5,6 @@
 @inject IWorkContext workContext
 @{
     NopHtml.AppendScriptParts(ResourceLocation.Footer, "~/lib_npm/chart.js/Chart.min.js");
-
     const string prefix = "inventoryprediction-statistics";
     const string hideCardAttributeName = "Reports.HideCustomerStatisticsCard";
     var hideCard = await genericAttributeService.GetAttributeAsync<bool>(await workContext.GetCurrentCustomerAsync(), hideCardAttributeName);
@@ -39,6 +38,14 @@
                                     </div>
                                     <div class="form-group row">
                                         <div class="col-md-4">
+                                            <nop-label asp-for="LocationId" />
+                                        </div>
+                                        <div class="col-md-8">
+                                            <nop-select asp-for="CategoryId" asp-items="Model.AvailableLocation" />
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-4">
                                             <nop-label asp-for="DiscountPercentage" />
                                         </div>
                                         <div class="col-md-8">
@@ -66,9 +73,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="card card-primary card-outline @if (hideCard){
-                <text>collapsed-card</text>
- }" id="@(prefix)-card">
+
+                @*sales by week time series chart*@
+                <div class="card card-primary card-outline @if (hideCard){ <text>collapsed-card</text> }" id="@(prefix)-card">
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
@@ -93,9 +100,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="card card-primary card-outline @if (hideCard){
-                <text>collapsed-card</text>
-}" id="@(prefix)-card">
+
+                @*sales by month chart*@
+                <div class="card card-primary card-outline @if (hideCard){<text>collapsed-card</text>}" id="@(prefix)-card">
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
@@ -120,9 +127,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="card card-primary card-outline @if (hideCard){
-                <text>collapsed-card</text>
- }" id="@(prefix)-card">
+
+                @*sale contribution of categories*@
+                <div class="card card-primary card-outline @if (hideCard){<text>collapsed-card</text>}" id="@(prefix)-card">
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
@@ -147,9 +154,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="card card-primary card-outline @if (hideCard){
-                <text>collapsed-card</text>
- }" id="@(prefix)-card">
+
+                @*location wise sales prediction *@
+                <div class="card card-primary card-outline @if (hideCard){ <text>collapsed-card</text>}" id="@(prefix)-card">
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
@@ -174,13 +181,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="card card-primary card-outline @if (hideCard){
-                <text>collapsed-card</text>
- }" id="@(prefix)-card">
+
+                @*category sales vs stock*@
+                <div class="card card-primary card-outline @if (hideCard){<text>collapsed-card</text>}" id="@(prefix)-card">
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
-                            @T("Sales Vs Stock")
+                            @T("Category Sales Vs Stock")
                         </h3>
                         <div class="card-tools float-right">
                             <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
@@ -201,6 +208,9 @@
                         </div>
                     </div>
                 </div>
+               
+                <div>
+                @*weekly product sales 
                 <div class="container-fluid">
                     <div class="form-horizontal">
                         <div class="cards-group">
@@ -275,6 +285,10 @@
                         </div>
                     </div>
                 </div>
+                *@
+                </div>
+
+                @*script for ajax and char functions*@
                 <script>
                     $(document).ready(function () {
 
@@ -283,6 +297,7 @@
                                 CategoryId: $('#@Html.IdFor(model => model.CategoryId)').val(),
                                 DiscountPercentage: $('#@Html.IdFor(model => model.DiscountPercentage)').val(),
                                 ShippingCharge: $('#@Html.IdFor(model => model.ShippingCharge)').val(),
+                                LocationId : $('#@Html.IdFor(model => model.LocationId)').val()
                             };
                             changeCsPeriod(model);
                         });
@@ -355,6 +370,7 @@
                                 responsive: true,
                             }
                         };
+
                         function changeCsPeriod(model) {
                             var csLabels = [];
                             var csData = [];
@@ -362,21 +378,18 @@
                             $.ajax({
                                 cache: false,
                                 type: "GET",
-                                url: "/Admin/SalesForecasting/Analysis",
+                                url: "/Admin/SalesForecasting/GetWeeklySalesByTimeSeriesModel",
                                 data: {
                                     CategoryId: model.CategoryId,
                                     DiscountPercentage: model.DiscountPercentage,
                                     ShippingCharge: model.ShippingCharge,
+                                    LocationId : model.LocationId
                                 },
                                 success: function (data, textStatus, jqXHR) {
-                                    $("#WeekId").attr('disabled', false);
-                                    $('#WeekId').empty();
                                     for (var i = 0; i < data.length; i++) {
                                         csLabels.push(data[i].WeekName);
                                         csData.push(data[i].WeeklySalesQuantity);
-                                        $("#WeekId").append('<option value=' + data[i].WeekId + ' onchange=getBestProducts(' + data[i].WeekId + ')>' + data[i].WeekName + '</option>');
                                     }
-
                                     if (!window.customerStatistics) {
                                         csConfig.data.labels = csLabels;
                                         csConfig.data.datasets[0].data = csData;
@@ -389,7 +402,6 @@
                                     }
                                 },
                                 error: function (jqXHR, textStatus, errorThrown) {
-                                    //$("#loadCustomerStatisticsAlert").click();
                                 }
                             });
                         }
@@ -399,8 +411,7 @@
                         <text>
                                 $('#search-analysis').trigger('click');
                         </text>
-                    }
-                                                                                      });
+                    }                                                                           });
                 </script>
             </div>
         </div>

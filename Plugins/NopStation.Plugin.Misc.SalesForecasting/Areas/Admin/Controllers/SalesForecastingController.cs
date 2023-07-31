@@ -204,7 +204,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             return Json(model);
         }
 
-        public IActionResult Analysis(TestFeatureModel testFeatureModel)
+        public IActionResult GetWeeklySalesByTimeSeriesModel(TestFeatureModel testFeatureModel)
         {
             // Create a list to hold the dummy objects
             List<object> dummyObjects = new List<object>();

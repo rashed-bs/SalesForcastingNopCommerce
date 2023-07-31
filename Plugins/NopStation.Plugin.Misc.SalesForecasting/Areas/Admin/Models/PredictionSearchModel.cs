@@ -14,16 +14,19 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models
         {
             AvailableCategory = new List<SelectListItem>();
             AvailableWeekItem = new List<SelectListItem>();
-            
+            AvailableLocation = new List<SelectListItem>();
         }
 
         public int CategoryId { get; set; }
         public decimal DiscountPercentage { get; set; }
         public decimal ShippingCharge { get; set; }
         public int WeekId { set; get; }
+        public int LocationId { set; get; }
+
 
         public IList<SelectListItem> AvailableCategory { get; set; }
         public IList<SelectListItem> AvailableWeekItem { get; set; }
+        public IList<SelectListItem> AvailableLocation { get; set; }
 
       
     }

@@ -11,5 +11,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models
         public int CategoryId { get; set; }
         public decimal DiscountPercentage { get; set; }
         public decimal ShippingCharge { get; set; }
+        public int LocationId { get; set; }
     }
 }
