@@ -34,7 +34,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
     public partial class SalesForecastingService : ISalesForecastingService
     {
         #region ctor
-        private readonly IRepository<Order> _orderRepository;
+            private readonly IRepository<Order> _orderRepository;
             private readonly IRepository<ProductCategory> _productCategoryRepository;
             private readonly IRepository<OrderItem> _orderItemRepository;
             private readonly IRepository<Address> _addressRepository;
@@ -86,6 +86,20 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         #endregion
 
         #region Utilities
+        public float LoadMetricFromFile(string metricFilePath)
+        {
+            if (File.Exists(metricFilePath))
+            {
+                string metricString = File.ReadAllText(metricFilePath);
+                if (float.TryParse(metricString, out float metric))
+                {
+                    return metric;
+                }
+            }
+
+            // Return a default value or handle error cases
+            return 0.0f;
+        }
         public void PathPreparation()
         {
             #region time series
@@ -1010,7 +1024,11 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             // save the training data to a csv file 
             CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
-            ForecastingModelHelper.TrainAndSaveCategoryWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            var metric = ForecastingModelHelper.TrainAndSaveCategoryWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+
+            // save the metric 
+            var metricFilePath = outputPathToSaveModel + "metric.txt";
+            File.WriteAllText(metricFilePath, metric.ToString());
 
             sucess = true;
 
@@ -1032,7 +1050,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             // save the training data to a csv file 
             CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
-            ForecastingModelHelper.TrainAndSaveLocationWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            var metric = ForecastingModelHelper.TrainAndSaveLocationWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+
+            // save the metric 
+            var metricFilePath = outputPathToSaveModel + "metric.txt";
+            File.WriteAllText(metricFilePath, metric.ToString());
+
 
             sucess = true;
 
@@ -1054,7 +1077,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             // save the training data to a csv file 
             CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
-            ForecastingModelHelper.TrainAndSaveAveragePriceWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            var metric = ForecastingModelHelper.TrainAndSaveAveragePriceWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+
+            // save the metric 
+            var metricFilePath = outputPathToSaveModel + "metric.txt";
+            File.WriteAllText(metricFilePath, metric.ToString());
+
 
             sucess = true;
 
@@ -1076,22 +1104,17 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             // save the training data to a csv file 
             CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
-            ForecastingModelHelper.TrainAndSaveMonthWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            var metric = ForecastingModelHelper.TrainAndSaveMonthWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+
+            // save the metric 
+            var metricFilePath = outputPathToSaveModel + "metric.txt";
+            File.WriteAllText(metricFilePath, metric.ToString());
+
 
             sucess = true;
 
             return (sucess, string.Empty);
         }
-        #endregion
-        
-        #region Ensemble Model Methods
-        public async Task<(bool, string)> TrainEnsembleMetaModelAsync(bool logInfo = false)
-        {
-            bool success = false;
-
-            return (success, string.Empty);
-        }
-
         #endregion
     }
 }

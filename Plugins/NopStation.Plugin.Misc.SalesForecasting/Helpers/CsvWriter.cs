@@ -54,7 +54,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Helpers
                 }
             }
         }
-
         private static string FormatValue(object value)
         {
             if (value == null)
@@ -69,4 +68,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Helpers
             return value.ToString();
         }
     }
+
+
+
 }

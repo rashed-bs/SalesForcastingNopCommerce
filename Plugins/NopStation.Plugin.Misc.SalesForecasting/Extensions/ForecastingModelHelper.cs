@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DocumentFormat.OpenXml.Drawing.Diagrams;
 using Microsoft.ML;
+using Microsoft.ML.Trainers.FastTree;
 using Microsoft.ML.Transforms.TimeSeries;
+using NopStation.Plugin.Misc.SalesForecasting.Helpers;
 using NopStation.Plugin.Misc.SalesForecasting.Models;
+using NUglify.Helpers;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 {
@@ -111,31 +115,41 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
         #endregion
 
         #region Base Category Wise Model
-        public static void TrainAndSaveCategoryWiseBaseModel(MLContext mlContext, List<CategoryBaseModelData> productSalesHistory, string outputModelPath)
+        public static float TrainAndSaveCategoryWiseBaseModel(MLContext mlContext, List<CategoryBaseModelData> productSalesHistory, string outputModelPath)
         {
             var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
 
-            var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
+            var trainer = mlContext.Regression.Trainers.FastTree(new FastTreeRegressionTrainer.Options() { NumberOfLeaves = 13, MinimumExampleCountPerLeaf = 21, NumberOfTrees = 15, MaximumBinCountPerFeature = 193, FeatureFraction = 0.606298742236359, LearningRate = 0.291552251064731, LabelColumnName = "Next", FeatureColumnName = "Features" });
 
-            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryBaseModelData.UnitsSoldCurrent), nameof(CategoryBaseModelData.UnitsSoldPrev))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "CategoryFeatures", inputColumnName: nameof(CategoryBaseModelData.CategoryId)))
-                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CategoryFeatures"))
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryBaseModelData.UnitsSoldCurrent), nameof(CategoryBaseModelData.UnitsSoldPrev), nameof(CategoryBaseModelData.CategoryId))
+                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures")
                 .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(CategoryBaseModelData.Next)))
-                .Append(trainer);
+                .Append(trainer));
 
             var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
+
+            // metric evaluation 
+            float metric = 0;
+            foreach (var crossValidationResult in crossValidationResults)
+            {
+                metric += (float)crossValidationResult.Metrics.RSquared;
+            }
+            metric /= crossValidationResults.Count;
 
             // Train the model.
             var model = trainingPipeline.Fit(trainingDataView);
 
             // Save the model for later comsumption from end-user apps.
             mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+
+            // return metric 
+            return metric;
         }
 
         #endregion
 
         #region Base Location Wise Model
-        public static void TrainAndSaveLocationWiseBaseModel(MLContext mlContext, List<LocationBaseModelData> productSalesHistory, string outputModelPath)
+        public static float TrainAndSaveLocationWiseBaseModel(MLContext mlContext, List<LocationBaseModelData> productSalesHistory, string outputModelPath)
         {
             var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
 
@@ -149,39 +163,59 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
             var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
 
+            // metric evaluation 
+            float metric = 0;
+            foreach (var crossValidationResult in crossValidationResults)
+            {
+                metric += (float)crossValidationResult.Metrics.RSquared;
+            }
+
+            metric /= crossValidationResults.Count;
+
             // Train the model.
             var model = trainingPipeline.Fit(trainingDataView);
 
             // Save the model for later comsumption from end-user apps.
             mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+
+            return metric;
         }
         #endregion
 
         #region Base Category Avg Price Wise Model
-        public static void TrainAndSaveAveragePriceWiseBaseModel(MLContext mlContext, List<CategoryAvgPriceBaseModelData> productSalesHistory, string outputModelPath)
+        public static float TrainAndSaveAveragePriceWiseBaseModel(MLContext mlContext, List<CategoryAvgPriceBaseModelData> productSalesHistory, string outputModelPath)
         {
             var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
 
-            var trainer = mlContext.Regression.Trainers.FastTreeTweedie(labelColumnName: "Label", featureColumnName: "Features");
+            var trainer = mlContext.Regression.Trainers.FastForest(new FastForestRegressionTrainer.Options() { NumberOfTrees = 4, NumberOfLeaves = 4, FeatureFraction = 1F, LabelColumnName = @"Next", FeatureColumnName = @"Features" });
 
-            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryAvgPriceBaseModelData.UnitsSoldCurrent), nameof(CategoryAvgPriceBaseModelData.UnitsSoldPrev), nameof(CategoryAvgPriceBaseModelData.CategoryAvgPrice))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "CategoryFeatures", inputColumnName: nameof(CategoryAvgPriceBaseModelData.CategoryId)))
-                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures", "CategoryFeatures"))
+            var trainingPipeline = mlContext.Transforms.Concatenate(outputColumnName: "NumFeatures", nameof(CategoryAvgPriceBaseModelData.UnitsSoldCurrent), nameof(CategoryAvgPriceBaseModelData.UnitsSoldPrev), nameof(CategoryAvgPriceBaseModelData.CategoryAvgPrice), nameof(CategoryAvgPriceBaseModelData.CategoryId))
+                .Append(mlContext.Transforms.Concatenate(outputColumnName: "Features", "NumFeatures"))
                 .Append(mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(CategoryAvgPriceBaseModelData.Next)))
                 .Append(trainer);
 
             var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
 
+            // metric evaluation 
+            float metric = 0;
+            foreach (var crossValidationResult in crossValidationResults)
+            {
+                metric += (float)crossValidationResult.Metrics.RSquared;
+            }
+            metric /= crossValidationResults.Count;
+
             // Train the model.
             var model = trainingPipeline.Fit(trainingDataView);
 
             // Save the model for later comsumption from end-user apps.
             mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+
+            return metric;
         }
         #endregion
 
         #region Base Month Wise Model
-        public static void TrainAndSaveMonthWiseBaseModel(MLContext mlContext, List<MonthBaseModelData> productSalesHistory, string outputModelPath)
+        public static float TrainAndSaveMonthWiseBaseModel(MLContext mlContext, List<MonthBaseModelData> productSalesHistory, string outputModelPath)
         {
             var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
 
@@ -195,11 +229,21 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
             var crossValidationResults = mlContext.Regression.CrossValidate(data: trainingDataView, estimator: trainingPipeline, numberOfFolds: 6, labelColumnName: "Label");
 
+            // metric evaluation 
+            float metric = 0;
+            foreach (var crossValidationResult in crossValidationResults)
+            {
+                metric += (float)crossValidationResult.Metrics.RSquared;
+            }
+            metric /= crossValidationResults.Count;
+
             // Train the model.
             var model = trainingPipeline.Fit(trainingDataView);
 
             // Save the model for later comsumption from end-user apps.
             mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+
+            return metric;
         }
         #endregion
 

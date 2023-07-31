@@ -31,12 +31,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting
         public static string MLModelMonthlyPredictionPathEnsemble => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelPathEnsemble/MonthlyModels";
 
         public static string MLModelWeeklyPredictionPathEnsemble => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelPathEnsemble/WeeklyModels";
-        public static string ProductSalesCategoryWiseBaseModel => "Product_Category_Wise_Base_Model";
+        public static string ProductSalesCategoryWiseBaseModel => "Product_Category_Wise_Base_Model.zip";
 
-        public static string ProductSalesLocationWiseBaseModel => "Product_Location_Wise_Base_Model";
-        public static string ProductSalesCategoryAvgPriceWiseBaseModel => "Product_Category_AvgPrice_Wise_Base_Model";
-        public static string ProductSalesMonthWiseBaseModel => "Product_Month_Wise_Base_Model";
-        public static string RegressionProductSalesFastTreeWeedieModelName => "Product_Sales_Regression_fastTreeTweedie";
+        public static string ProductSalesLocationWiseBaseModel => "Product_Location_Wise_Base_Model.zip";
+        public static string ProductSalesCategoryAvgPriceWiseBaseModel => "Product_Category_AvgPrice_Wise_Base_Model.zip";
+        public static string ProductSalesMonthWiseBaseModel => "Product_Month_Wise_Base_Model.zip";
+        public static string RegressionProductSalesFastTreeWeedieModelName => "Product_Sales_Regression_fastTreeTweedie.zip";
 
         public static string RegressionProductForecastingModelPath => "product_month_fastTreeTweedie.zip";
 
