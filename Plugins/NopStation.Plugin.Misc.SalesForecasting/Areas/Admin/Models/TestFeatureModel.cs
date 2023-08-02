@@ -13,4 +13,11 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models
         public decimal ShippingCharge { get; set; }
         public int LocationId { get; set; }
     }
+
+    public class JsonResponse
+    {
+        public string XLabelName { get; set; }
+        public float YLabelValue { get; set; }
+
+    }
 }

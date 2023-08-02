@@ -10,7 +10,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 {
     public interface ISalesForecastingService
     {
-        Task<(bool, string)> TrainWeeklySalesPredictionModelAsync(bool logInfo = false);
+        Task<(bool, string)> TrainWeeklySalesPredictionTimeSeriesModelAsync(bool logInfo = false);
 
         Task<(bool, string)> TrainLargeFeatureProductSalesPredictionModelAsync(bool logInfo = false);
 
@@ -21,6 +21,14 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         Task<(bool, string)> TrainBaseCategoryAvgPriceWiseProductSalesPredictionModelAsync(bool logInfo = false);
 
         Task<(bool, string)> TrainBaseMonthWiseProductSalesPredictionModelAsync(bool logInfo = false);
+
+        Task<List<SalesData>> DailySalesHistoryQueryLastMonth();
+
+        List<float> TimeSeriesPredictWeeklySales(bool logInfo = false);
+
+        Task<List<MonthBaseModelData>> MonthlySalesHistoryQueryLastYear();
+
+        Task<float> PredictEnsembleNextMonthSales();
 
         public void PathPreparation();
     }

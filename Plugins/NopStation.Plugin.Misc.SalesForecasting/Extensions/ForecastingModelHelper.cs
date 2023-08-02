@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using DocumentFormat.OpenXml.Drawing.Diagrams;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 using Microsoft.ML.Trainers.FastTree;
 using Microsoft.ML.Transforms.TimeSeries;
 using NopStation.Plugin.Misc.SalesForecasting.Helpers;
@@ -146,6 +147,22 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
             return metric;
         }
 
+        public static float PredictCategoryWiseBaseModel(MLContext mlContext, string outputModelPath, CategoryBaseModelSampleData sampleData)
+        {
+            // Load the forecast engine that has been previously saved.
+            ITransformer trainedModel;
+            using (var file = File.OpenRead(outputModelPath))
+            {
+                trainedModel = mlContext.Model.Load(file, out var schema);  
+            }
+
+            var predictionEngine = mlContext.Model.CreatePredictionEngine<CategoryBaseModelSampleData, EnsemblePredictData>(trainedModel);
+
+            var salesPrediction = predictionEngine.Predict(sampleData);
+
+            return salesPrediction.Score;
+        }
+
         #endregion
 
         #region Base Location Wise Model
@@ -180,6 +197,22 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
             return metric;
         }
+
+        public static float PredictLocationWiseBaseModel(MLContext mlContext, string outputModelPath, LocationBaseModelSampleData sampleData)
+        {
+            // Load the forecast engine that has been previously saved.
+            ITransformer trainedModel;
+            using (var file = File.OpenRead(outputModelPath))
+            {
+                trainedModel = mlContext.Model.Load(file, out var schema);
+            }
+
+            var predictionEngine = mlContext.Model.CreatePredictionEngine<LocationBaseModelSampleData, EnsemblePredictData>(trainedModel);
+
+            var salesPrediction = predictionEngine.Predict(sampleData);
+
+            return salesPrediction.Score;
+        }
         #endregion
 
         #region Base Category Avg Price Wise Model
@@ -211,6 +244,22 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
             mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
 
             return metric;
+        }
+
+        public static float PredictCategoryAvgPriceWiseBaseModel(MLContext mlContext, string outputModelPath, CategoryAvgPriceBaseModelSampleData sampleData)
+        {
+            // Load the forecast engine that has been previously saved.
+            ITransformer trainedModel;
+            using (var file = File.OpenRead(outputModelPath))
+            {
+                trainedModel = mlContext.Model.Load(file, out var schema);
+            }
+
+            var predictionEngine = mlContext.Model.CreatePredictionEngine<CategoryAvgPriceBaseModelSampleData, EnsemblePredictData>(trainedModel);
+
+            var salesPrediction = predictionEngine.Predict(sampleData);
+
+            return salesPrediction.Score;
         }
         #endregion
 
@@ -244,6 +293,22 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
             mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
 
             return metric;
+        }
+
+        public static float PredictMonthWiseBaseModel(MLContext mlContext, string outputModelPath, MonthBaseModelSampleData sampleData)
+        {
+            // Load the forecast engine that has been previously saved.
+            ITransformer trainedModel;
+            using (var file = File.OpenRead(outputModelPath))
+            {
+                trainedModel = mlContext.Model.Load(file, out var schema);
+            }
+
+            var predictionEngine = mlContext.Model.CreatePredictionEngine<MonthBaseModelSampleData, EnsemblePredictData>(trainedModel);
+
+            var salesPrediction = predictionEngine.Predict(sampleData);
+
+            return salesPrediction.Score;
         }
         #endregion
 

@@ -67,34 +67,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
                 return productModel;
             }).ToListAsync();
         }
-
-        public Task<WeeklyPredictionList> PrepareWeeklyPredictionList(PredictionSearchModel predictionSearchModel)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        //public async Task<WeeklyPredictionList> PrepareWeeklyPredictionList(PredictionSearchModel predictionSearchModel)
-        //{
-        //    var model = await _mLModelService.PredictInventoryProductWeeklyData(predictionSearchModel);
-        //    var data = model.Where(x => x.WeekId == predictionSearchModel.WeekId).Select(x => x.WeeklyProducts).FirstOrDefault();
-        //    var list = data?.ToPagedList(predictionSearchModel);
-        //    if (list != null)
-        //        return await new WeeklyPredictionList().PrepareToGridAsync(predictionSearchModel, list, () =>
-        //        {
-        //            var res = list.SelectAwait(async weeklyProduct =>
-        //            {
-        //                var obj = new WeeklyProduct();
-        //                obj.SalesQuantity = weeklyProduct.SalesQuantity;
-        //                var product = await _productService.GetProductByIdAsync(weeklyProduct.ProductId);
-        //                obj.ProductName = product.Name;
-        //                obj.ProductId = weeklyProduct.ProductId;
-        //                return obj;
-        //            });
-        //            return res;
-        //        });
-        //    else
-        //        return new WeeklyPredictionList();
-        //}
     }
 }
 

@@ -19,4 +19,10 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
         public float NextDayUnits { get; set; }
         public float IsWeekend { get; set; }
     }
+
+    public class LiteSalesData
+    {
+        public DateTime Date { get; set; }
+        public float unitSold { get; set; }
+    }
 }

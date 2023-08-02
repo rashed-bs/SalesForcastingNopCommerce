@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DocumentFormat.OpenXml.EMMA;
@@ -120,8 +121,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             _salesForecastingService.PathPreparation();
             #endregion
 
-            #region Train Sales Prediction Model 
-            var trainWeeklyTimeSeriesModelStatus = await _salesForecastingService.TrainWeeklySalesPredictionModelAsync();
+            #region Train Sales Prediction Time series Model
+            var trainWeeklyTimeSeriesModelStatus = await _salesForecastingService.TrainWeeklySalesPredictionTimeSeriesModelAsync();
 
             if (trainWeeklyTimeSeriesModelStatus.Item1)
                 _notificationService.SuccessNotification("Training of time series model successfull");
@@ -198,30 +199,129 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             return View(searchModel);
         }
 
-        public async Task<IActionResult> WeeklyAnalysisListAsync(PredictionSearchModel searchModel)
+        public async Task<IActionResult> GetWeeklySalesByTimeSeriesModelAsync(TestFeatureModel testFeatureModel)
         {
-            var model = await _salesForecastingModelFactory.PrepareWeeklyPredictionList(searchModel);
-            return Json(model);
-        }
-
-        public IActionResult GetWeeklySalesByTimeSeriesModel(TestFeatureModel testFeatureModel)
-        {
-            // Create a list to hold the dummy objects
-            List<object> dummyObjects = new List<object>();
-
-            // Add 10 dummy objects to the list
-            for (int i = 0; i < 10; i++)
+            var predictions = _salesForecastingService.TimeSeriesPredictWeeklySales();
+            var prevMonthSalesHistoryPerDay = await _salesForecastingService.DailySalesHistoryQueryLastMonth();
+            prevMonthSalesHistoryPerDay.Reverse();
+            var salesResponse = new List<JsonResponse>();
+            foreach (var eachDay in prevMonthSalesHistoryPerDay)
             {
-                var dummyObject = new
+                salesResponse.Add(new JsonResponse
                 {
-                    WeekName = $"Week {i + 1}",
-                    WeeklySalesQuantity = 10 * (i + 1)
-                };
-
-                dummyObjects.Add(dummyObject);
+                    XLabelName = $"{eachDay.Day}.{eachDay.Month}.{eachDay.Year}",
+                    YLabelValue = eachDay.NextDayUnits
+                });
             }
-
-            return Json(dummyObjects);
+            salesResponse.Add(new JsonResponse
+            {
+                XLabelName = "Today",
+                YLabelValue = predictions[0]
+            });
+            var today = DateTime.UtcNow;
+            for(int i = 1;i < predictions.Count();i++)
+            {
+                var currentDay = today.AddDays(i);
+                salesResponse.Add(new JsonResponse
+                {
+                    XLabelName = "",
+                    YLabelValue = predictions[i]
+                });
+                if(currentDay.DayOfWeek == DayOfWeek.Sunday)
+                {
+                    salesResponse[salesResponse.Count - 1].XLabelName = "Sunday";
+                }
+                else if (currentDay.DayOfWeek == DayOfWeek.Monday)
+                {
+                    salesResponse[salesResponse.Count - 1].XLabelName = "Monday";
+                }
+                else if (currentDay.DayOfWeek == DayOfWeek.Tuesday)
+                {
+                    salesResponse[salesResponse.Count - 1].XLabelName = "Tuesday";
+                }
+                else if (currentDay.DayOfWeek == DayOfWeek.Wednesday)
+                {
+                    salesResponse[salesResponse.Count - 1].XLabelName = "Wednesday";
+                }
+                else if (currentDay.DayOfWeek == DayOfWeek.Thursday)
+                {
+                    salesResponse[salesResponse.Count - 1].XLabelName = "Thursday";
+                }
+                else if (currentDay.DayOfWeek == DayOfWeek.Friday)
+                {
+                    salesResponse[salesResponse.Count - 1].XLabelName = "Friday";
+                }
+                else if (currentDay.DayOfWeek == DayOfWeek.Saturday)
+                {
+                    salesResponse[salesResponse.Count - 1].XLabelName = "Saturday";
+                }
+            }
+            return Json(salesResponse);
+        }
+        public async Task<IActionResult> GetMonthlyCategoriesCombinedSales(TestFeatureModel testFeatureModel)
+        {
+            var prevYearSalesHistoryPerMonth = await _salesForecastingService.MonthlySalesHistoryQueryLastYear();
+            prevYearSalesHistoryPerMonth.Reverse();
+            var prediction = await _salesForecastingService.PredictEnsembleNextMonthSales();
+            var salesResponse = new List<JsonResponse>();
+            foreach (var eachMonth in prevYearSalesHistoryPerMonth)
+            {
+                salesResponse.Add(new JsonResponse
+                {
+                    XLabelName = $"{eachMonth.Month}",
+                    YLabelValue = eachMonth.UnitsSoldCurrent
+                });
+            }
+            foreach(var each in salesResponse)
+            {
+                switch (each.XLabelName)
+                {
+                    case "1":
+                        each.XLabelName = "January";
+                        break;
+                    case "2":
+                        each.XLabelName = "February";
+                        break;
+                    case "3":
+                        each.XLabelName = "March";
+                        break;
+                    case "4":
+                        each.XLabelName = "April";
+                        break;
+                    case "5":
+                        each.XLabelName = "May";
+                        break;
+                    case "6":
+                        each.XLabelName = "June";
+                        break;
+                    case "7":
+                        each.XLabelName = "July";
+                        break;
+                    case "8":
+                        each.XLabelName = "August";
+                        break;
+                    case "9":
+                        each.XLabelName = "September";
+                        break;
+                    case "10":
+                        each.XLabelName = "October";
+                        break;
+                    case "11":
+                        each.XLabelName = "November";
+                        break;
+                    case "12":
+                        each.XLabelName = "December";
+                        break;
+                    default:
+                        break;
+                }
+            } 
+           /* salesResponse.Add(new JsonResponse
+            {
+                XLabelName = "Next Month",
+                YLabelValue = prediction
+            });*/
+            return Json(salesResponse);
         }
 
         #endregion

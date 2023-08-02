@@ -9,8 +9,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
     public interface ISalesForecastingModelFactory
     {
         Task<PredictionSearchModel> PreparePredictionSearchModel(PredictionSearchModel predictionSearchModel, string defaultValue = "0");
-        Task<WeeklyPredictionList> PrepareWeeklyPredictionList(PredictionSearchModel predictionSearchModel);
-
         Task<IEnumerable<ProductModel>> PrepareProductModelsAsync(IEnumerable<Product> products);
     }
 }

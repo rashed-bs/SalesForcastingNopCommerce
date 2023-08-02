@@ -14,6 +14,13 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
         public float Next { get; set; }
     }
 
+    public class CategoryBaseModelSampleData
+    {
+        public float CategoryId { get; set; }
+        public float UnitsSoldCurrent { get; set; }
+        public float UnitsSoldPrev { get; set; }
+    }
+
     public class CategoryAvgPriceBaseModelData
     {
         public float CategoryId { get; set; }
@@ -23,12 +30,27 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
         public float Next { get; set; }
     }
 
+    public class CategoryAvgPriceBaseModelSampleData
+    {
+        public float CategoryId { get; set; }
+        public float CategoryAvgPrice { get; set; }
+        public float UnitsSoldCurrent { get; set; }
+        public float UnitsSoldPrev { get; set; }
+    }
+
     public class LocationBaseModelData
     {
         public int CountryId { get; set; }
         public float UnitsSoldCurrent { get; set; }
         public float UnitsSoldPrev { get; set; }
         public float Next { get; set; }
+    } 
+    
+    public class LocationBaseModelSampleData
+    {
+        public int CountryId { get; set; }
+        public float UnitsSoldCurrent { get; set; }
+        public float UnitsSoldPrev { get; set; }
     }
     
     public class MonthBaseModelData
@@ -37,6 +59,18 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Models
         public float UnitsSoldCurrent { get; set; }
         public float UnitsSoldPrev { get; set; }
         public float Next { get; set; }
+    }  
+    
+    public class MonthBaseModelSampleData
+    {
+        public int Month { get; set; }
+        public float UnitsSoldCurrent { get; set; }
+        public float UnitsSoldPrev { get; set; }
+    }
+
+    public class EnsemblePredictData
+    {
+        public float Score { get; set; }
     }
 
     public class TemporaryBaseModelData

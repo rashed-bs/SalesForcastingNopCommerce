@@ -106,7 +106,7 @@
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
-                            @T("Monthly sales prediction")
+                            @T("Monthly Top Categories Combined Sales Prediction")
                         </h3>
                         <div class="card-tools float-right">
                             <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
@@ -123,7 +123,7 @@
                     </div>
                     <div class="card-body">
                         <div class="chart" style="height: 300px;">
-                            <canvas id="@(prefix)-chart" height="300"></canvas>
+                            <canvas id="@(prefix)-chart-monthly-combined" height="300"></canvas>
                         </div>
                     </div>
                 </div>
@@ -291,18 +291,14 @@
                 @*script for ajax and char functions*@
                 <script>
                     $(document).ready(function () {
+                        var model = {
+                            CategoryId: $('#@Html.IdFor(model => model.CategoryId)').val(),
+                            DiscountPercentage: $('#@Html.IdFor(model => model.DiscountPercentage)').val(),
+                            ShippingCharge: $('#@Html.IdFor(model => model.ShippingCharge)').val(),
+                            LocationId: $('#@Html.IdFor(model => model.LocationId)').val()
+                        };
 
-                        $('#search-analysis').on('click', function () {
-                            var model = {
-                                CategoryId: $('#@Html.IdFor(model => model.CategoryId)').val(),
-                                DiscountPercentage: $('#@Html.IdFor(model => model.DiscountPercentage)').val(),
-                                ShippingCharge: $('#@Html.IdFor(model => model.ShippingCharge)').val(),
-                                LocationId : $('#@Html.IdFor(model => model.LocationId)').val()
-                            };
-                            changeCsPeriod(model);
-                        });
-
-                        var csConfig = {
+                        var csConfigWeeklySalesTimeSeries = {
                             type: 'line',
                             data: {
                                 labels: [],
@@ -370,8 +366,7 @@
                                 responsive: true,
                             }
                         };
-
-                        function changeCsPeriod(model) {
+                        function drawWeeklySalesPredictionByTimeSeries(model) {
                             var csLabels = [];
                             var csData = [];
                             console.log("Model: ", model);
@@ -383,22 +378,18 @@
                                     CategoryId: model.CategoryId,
                                     DiscountPercentage: model.DiscountPercentage,
                                     ShippingCharge: model.ShippingCharge,
-                                    LocationId : model.LocationId
+                                    LocationId: model.LocationId
                                 },
                                 success: function (data, textStatus, jqXHR) {
-                                    $("#WeekId").attr('disabled', false);
-                                    $('#WeekId').empty();
                                     for (var i = 0; i < data.length; i++) {
-                                        csLabels.push(data[i].WeekName);
-                                        csData.push(data[i].WeeklySalesQuantity);
-                                        $("#WeekId").append('<option value=' + data[i].WeekId + ' onchange=getBestProducts(' + data[i].WeekId + ')>' + data[i].WeekName + '</option>');
+                                        csLabels.push(data[i].XLabelName);
+                                        csData.push(data[i].YLabelValue);
                                     }
-
                                     if (!window.customerStatistics) {
-                                        csConfig.data.labels = csLabels;
-                                        csConfig.data.datasets[0].data = csData;
-                                        csConfig.data.scales =
-                                            window.customerStatistics = new Chart(document.getElementById("@prefix-chart").getContext("2d"), csConfig);
+                                        csConfigWeeklySalesTimeSeries.data.labels = csLabels;
+                                        csConfigWeeklySalesTimeSeries.data.datasets[0].data = csData;
+                                        csConfigWeeklySalesTimeSeries.data.scales =
+                                            window.customerStatistics = new Chart(document.getElementById("@prefix-chart").getContext("2d"), csConfigWeeklySalesTimeSeries);
                                     } else {
                                         window.customerStatistics.config.data.labels = csLabels;
                                         window.customerStatistics.config.data.datasets[0].data = csData;
@@ -406,17 +397,124 @@
                                     }
                                 },
                                 error: function (jqXHR, textStatus, errorThrown) {
-                                    //$("#loadCustomerStatisticsAlert").click();
                                 }
                             });
                         }
+                        drawWeeklySalesPredictionByTimeSeries(model);
 
-                    @if (!hideCard)
-                    {
-                        <text>
-                                $('#search-analysis').trigger('click');
-                        </text>
-                    }                                                                           });
+                        var csConfigMonthlyCategoryCombinedSales = {
+                            type: 'line',
+                            data: {
+                                labels: [],
+                                datasets: [
+                                    {
+                                        label: "@T("Plugins.NopStation.InventoryPrediction.Report.WeeklySalesQuantity")",
+                                        fillColor: "rgba(60,141,188,0.9)",
+                                        strokeColor: "rgba(60,141,188,0.8)",
+                                        pointColor: "#00a65a",
+                                        pointStrokeColor: "rgba(0,166,90,1)",
+                                        pointHighlightFill: "#fff",
+                                        pointHighlightStroke: "rgba(0,166,90,1)",
+                                        borderColor: 'rgba(0,166,90, 1)',
+                                        backgroundColor: 'rgba(0,166,90,0.5)',
+                                        pointBorderColor: 'rgba(0,166,90,0.7)',
+                                        pointBackgroundColor: 'rgba(0,166,90,0.2)',
+                                        pointBorderWidth: 1,
+                                        data: []
+                                    }
+                                ]
+                            },
+                            options: {
+                                legend: {
+                                    display: false
+                                },
+                                scales: {
+                                    xAxes: [{
+                                        display: true,
+                                        ticks: {
+                                            userCallback: function (dataLabel, index) {
+                                                if (window.customerStatistics && window.customerStatistics.config.data.labels.length > 12) {
+                                                    return index % 5 === 0 ? dataLabel : '';
+                                                }
+                                                return dataLabel;
+                                            }
+                                        },
+
+                                    }],
+                                    yAxes: [{
+                                        display: true,
+                                        ticks: {
+                                            userCallback: function (dataLabel, index) {
+                                                return (dataLabel ^ 0) === dataLabel ? dataLabel : '';
+                                            },
+                                            min: 0
+                                        },
+                                    }],
+                                },
+                                showScale: true,
+                                scaleShowGridLines: false,
+                                scaleGridLineColor: "rgba(0,0,0,.05)",
+                                scaleGridLineWidth: 1,
+                                scaleShowHorizontalLines: true,
+                                scaleShowVerticalLines: true,
+                                bezierCurve: true,
+                                pointDot: false,
+                                pointDotRadius: 4,
+                                pointDotStrokeWidth: 1,
+                                pointHitDetectionRadius: 20,
+                                datasetStroke: true,
+                                datasetFill: true,
+                                maintainAspectRatio: false,
+                                responsive: true,
+                            }
+                        };
+                        
+                        function drawMonthlyCategoriesCombinedSales(model) {
+                            var csLabels = [];
+                            var csData = [];
+                            console.log("Model: ", model);
+                            $.ajax({
+                                cache: false,
+                                type: "GET",
+                                url: "/Admin/SalesForecasting/GetMonthlyCategoriesCombinedSales",
+                                data: {
+                                    CategoryId: model.CategoryId,
+                                    DiscountPercentage: model.DiscountPercentage,
+                                    ShippingCharge: model.ShippingCharge,
+                                    LocationId: model.LocationId
+                                },
+                                success: function (data, textStatus, jqXHR) {
+                                    for (var i = 0; i < data.length; i++) {
+                                        csLabels.push(data[i].XLabelName);
+                                        csData.push(data[i].YLabelValue);
+                                    }
+                                    if (!window.customerStatisticsMonthlySales) {
+                                        csConfigMonthlyCategoryCombinedSales.data.labels = csLabels;
+                                        csConfigMonthlyCategoryCombinedSales.data.datasets[0].data = csData;
+                                        csConfigMonthlyCategoryCombinedSales.data.scales =
+                                            window.customerStatisticsMonthlySales = new Chart(document.getElementById("@prefix-chart-monthly-combined").getContext("2d"), csConfigMonthlyCategoryCombinedSales);
+                                    } else {
+                                        window.customerStatisticsMonthlySales.config.data.labels = csLabels;
+                                        window.customerStatisticsMonthlySales.config.data.datasets[0].data = csData;
+                                        window.customerStatisticsMonthlySales.update();
+                                    }
+                                },
+                                error: function (jqXHR, textStatus, errorThrown) {
+                                }
+                            });
+                        }
+                        drawMonthlyCategoriesCombinedSales(model);
+                        
+                        
+                        $('#search-analysis').on('click', function () {
+                            
+                        });
+                        @if (!hideCard)
+                        {
+                            <text>
+                                    $('#search-analysis').trigger('click');
+                            </text>
+                        }});
                 </script>
             </div>
         </div>
