@@ -258,6 +258,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             }
             return Json(salesResponse);
         }
+
         public async Task<IActionResult> GetMonthlyCategoriesCombinedSales(TestFeatureModel testFeatureModel)
         {
             var prevYearSalesHistoryPerMonth = await _salesForecastingService.MonthlySalesHistoryQueryLastYear();
@@ -316,11 +317,42 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
                         break;
                 }
             } 
-           /* salesResponse.Add(new JsonResponse
+            salesResponse.Add(new JsonResponse
             {
                 XLabelName = "Next Month",
                 YLabelValue = prediction
-            });*/
+            });
+            return Json(salesResponse);
+        }
+
+        public async Task<IActionResult> GetMonthlyCategoriesCombinedSalesContribution(TestFeatureModel testFeatureModel)
+        {
+            var prediction = await _salesForecastingService.PredictCategorySalesContribution();
+            var salesResponse = new List<JsonResponse>();
+            foreach(var eachPrediction in prediction)
+            {
+                salesResponse.Add(new JsonResponse
+                {
+                    XLabelName = $"{eachPrediction.CategoryName}",
+                    YLabelValue = eachPrediction.contribution
+                });
+            }
+            return Json(salesResponse);
+        }
+        public async Task<IActionResult> GetMonthlyCategoriesPredictedSalesVsStock(TestFeatureModel testFeatureModel)
+        {
+            // work here 
+            var prediction = await _salesForecastingService.PredictCategorySalesContribution();
+            var salesResponse = new List<JsonResponse>();
+            foreach(var eachPrediction in prediction)
+            {
+                salesResponse.Add(new JsonResponse
+                {
+                    XLabelName = $"{eachPrediction.CategoryName}",
+                    YLabelValuePredicted = eachPrediction.quantity, 
+                    YLabelValueInStock = (eachPrediction.quantity * 100)%80
+                });
+            }
             return Json(salesResponse);
         }
 

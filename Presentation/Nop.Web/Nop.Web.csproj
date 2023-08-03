@@ -49,6 +49,7 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <PackageReference Include="Microsoft.ML.FastTree" Version="2.0.1" />
+    <PackageReference Include="Microsoft.ML.LightGbm" Version="2.0.1" />
     <PackageReference Include="Microsoft.ML.Mkl.Redist" Version="2.0.1" />
 
     <None Update="Areas\Admin\sitemap.config">

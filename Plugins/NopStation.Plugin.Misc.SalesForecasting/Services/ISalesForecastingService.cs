@@ -26,7 +26,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         List<float> TimeSeriesPredictWeeklySales(bool logInfo = false);
 
-        Task<List<MonthBaseModelData>> MonthlySalesHistoryQueryLastYear();
+        Task<List<MonthBaseModelInputData>> MonthlySalesHistoryQueryLastYear();
+        Task<List<MonthlySalesCategoryContribution>> PredictCategorySalesContribution();
 
         Task<float> PredictEnsembleNextMonthSales();
 

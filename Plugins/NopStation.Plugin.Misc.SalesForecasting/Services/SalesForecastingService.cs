@@ -587,7 +587,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                         };
             return await query.ToListAsync();
         }
-        private async Task<List<CategoryBaseModelData>> CategoryBaseModelSalesHistory()
+        private async Task<List<CategoryBaseModelInputData>> CategoryBaseModelSalesHistory()
         {
             var categorySubToRoot = await _staticCacheManager.GetAsync(SalesForecastingDefaults.CategorySubToRootMappingCacheKey, CreateCategoryMappingSubToRoot);
 
@@ -621,7 +621,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                     CategoryId = (int)g.Key.CategoryId,
                     Unit = g.Sum(x => x.Unit)
                 }).ToList().OrderBy(x => x.CategoryId).ToList();
-            var categoryWiseMonthlySalesWithLabel = categoryWiseMonthlySales.Select((x, index) => new CategoryBaseModelData
+            var categoryWiseMonthlySalesWithLabel = categoryWiseMonthlySales.Select((x, index) => new CategoryBaseModelInputData
             {
                 CategoryId = (int)x.CategoryId,
                 UnitsSoldCurrent = (float)x.Unit,
@@ -633,7 +633,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             return categoryWiseMonthlySalesWithLabel;
         }
-        private async Task<List<CategoryAvgPriceBaseModelData>> CategoryAvgPriceBaseModelSalesHistory()
+        private async Task<List<CategoryAvgPriceBaseModelInputData>> CategoryAvgPriceBaseModelSalesHistory()
         {
             var categorySubToRoot = await _staticCacheManager.GetAsync(SalesForecastingDefaults.CategorySubToRootMappingCacheKey, CreateCategoryMappingSubToRoot);
 
@@ -667,7 +667,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                     CategoryId = (int)g.Key.CategoryId,
                     Unit = g.Sum(x => x.Unit)
                 }).ToList().OrderBy(x => x.CategoryId).ToList();
-            var categoryWiseMonthlySalesWithLabel = categoryWiseMonthlySales.Select((x, index) => new CategoryAvgPriceBaseModelData
+            var categoryWiseMonthlySalesWithLabel = categoryWiseMonthlySales.Select((x, index) => new CategoryAvgPriceBaseModelInputData
             {
                 CategoryId = (int)x.CategoryId,
                 CategoryAvgPrice = categoryAvgPrices[(int)x.CategoryId],
@@ -680,7 +680,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             return categoryWiseMonthlySalesWithLabel;
         }
-        private async Task<List<LocationBaseModelData>> LocationBaseModelSalesHistory()
+        private async Task<List<LocationBaseModelInputData>> LocationBaseModelSalesHistory()
         {
             var topOrderingLocations = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopOrderingLocationsCacheKey, TopOrderingLocations);
 
@@ -712,7 +712,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                     CountryId = (int)g.Key.CountryId,
                     Unit = g.Sum(x => x.Unit)
                 }).ToList().OrderBy(x => x.CategoryId).ToList();
-            var locationWiseMonthlySalesWithLabel = locationWiseMonthlySales.Select((x, index) => new LocationBaseModelData
+            var locationWiseMonthlySalesWithLabel = locationWiseMonthlySales.Select((x, index) => new LocationBaseModelInputData
             {
                 CountryId = (int)x.CountryId,
                 UnitsSoldCurrent = (float)x.Unit,
@@ -725,7 +725,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             return locationWiseMonthlySalesWithLabel;
         }
-        private async Task<List<MonthBaseModelData>> MonthBaseModelSalesHistory()
+        private async Task<List<MonthBaseModelInputData>> MonthBaseModelSalesHistory()
         {
             var query = from goi in (from oi in _orderItemRepository.Table
                                      join o in _orderRepository.Table on oi.OrderId equals o.Id
@@ -738,13 +738,13 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                                          Unit = oi.Quantity
                                      })
                         group goi by new { goi.Year, goi.Month } into ggoi
-                        select new MonthBaseModelData
+                        select new MonthBaseModelInputData
                         {
                             Month = (int)ggoi.Key.Month, 
                             UnitsSoldCurrent = (float)ggoi.Sum(x => x.Unit)
                         };
             var queryResult = await query.ToListAsync();
-            var monthWiseMonthlySalesWithLabel = queryResult.Select((x, index) => new MonthBaseModelData
+            var monthWiseMonthlySalesWithLabel = queryResult.Select((x, index) => new MonthBaseModelInputData
             {
                 Month = x.Month,
                 UnitsSoldCurrent = x.UnitsSoldCurrent,
@@ -756,7 +756,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             return monthWiseMonthlySalesWithLabel;
         }
-        private async Task<List<MonthBaseModelData>> MonthBaseSalesHistoryPrevYear()
+        private async Task<List<MonthBaseModelInputData>> MonthBaseSalesHistoryPrevYear()
         {
             var query1 = from goi in (from oi in _orderItemRepository.Table
                                       join o in _orderRepository.Table on oi.OrderId equals o.Id
@@ -769,7 +769,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                                           Unit = oi.Quantity
                                       })
                          group goi by new { goi.Year, goi.Month } into ggoi
-                         orderby ggoi.Key.Year descending, ggoi.Key.Month descending
+                         orderby ggoi.Key.Year descending, ggoi.Key.Month ascending
                          select new 
                          {
                              Year = ggoi.Key.Year,
@@ -790,13 +790,13 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                                      })
                         group goi by new { goi.Year, goi.Month } into ggoi
                         orderby ggoi.Key.Year descending, ggoi.Key.Month descending
-                        select new MonthBaseModelData
+                        select new MonthBaseModelInputData
                         {
                             Month = (int)ggoi.Key.Month,
                             UnitsSoldCurrent = (float)ggoi.Sum(x => x.Unit)
                         };
             var queryResult = await query.ToListAsync();
-            var last12Entries = queryResult.Skip(Math.Max(0, queryResult.Count - 12)).Take(12).ToList();
+            var last12Entries = queryResult.Take(12).ToList();
             return last12Entries;
         }
 
@@ -1249,8 +1249,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         }
         #endregion
 
-        #region Ensemble Methods
-        public async Task<List<MonthBaseModelData>> MonthlySalesHistoryQueryLastYear()
+        #region Ensemble Prediction Methods
+        public async Task<List<MonthBaseModelInputData>> MonthlySalesHistoryQueryLastYear()
         {
             var last12MonthSalesData = await MonthBaseSalesHistoryPrevYear();
             return last12MonthSalesData;
@@ -1276,11 +1276,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var categoryCumulativePrediction = 0.0;
             foreach (var catetory in  topCategories)
             {
-                var predictedSalesCategoryWise = ForecastingModelHelper.PredictCategoryWiseBaseModel(_mlContext, outputPathToLoadCategoryWiseModel, new CategoryBaseModelSampleData
+                var predictedSalesCategoryWise = ForecastingModelHelper.PredictCategoryWiseBaseModel(_mlContext, outputPathToLoadCategoryWiseModel, new CategoryBaseModelInputData
                 {
                     CategoryId = catetory.CategoryId,
                     UnitsSoldPrev = unitSoldPrev, 
                     UnitsSoldCurrent = unitSoldCurrent,
+                    Next = 0
                 });
                 categoryCumulativePrediction += predictedSalesCategoryWise;
             }
@@ -1293,12 +1294,13 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToLoadCategoryAvgPriceWiseModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryAvgPriceWiseBaseModel);
             foreach (var catetory in topCategories)
             {
-                var predictedSalesAvgPriceWise = ForecastingModelHelper.PredictCategoryAvgPriceWiseBaseModel(_mlContext, outputPathToLoadCategoryAvgPriceWiseModel, new CategoryAvgPriceBaseModelSampleData
+                var predictedSalesAvgPriceWise = ForecastingModelHelper.PredictCategoryAvgPriceWiseBaseModel(_mlContext, outputPathToLoadCategoryAvgPriceWiseModel, new CategoryAvgPriceBaseModelInputData
                 {
                     CategoryId = catetory.CategoryId,
                     CategoryAvgPrice = categoryAvgPrices.ContainsKey(catetory.CategoryId) ? categoryAvgPrices[catetory.CategoryId] : 0,
                     UnitsSoldCurrent = unitSoldCurrent, 
-                    UnitsSoldPrev = unitSoldPrev
+                    UnitsSoldPrev = unitSoldPrev,
+                    Next = 0
                 });
                 categoryAvgPriceCumulativePrediction += predictedSalesAvgPriceWise;
             }
@@ -1307,11 +1309,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             #region month wise prediction 
             // get prediction from month wise base model 
             var outputPathToLoadMonthWiseModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesMonthWiseBaseModel);
-            var monthWisePrediction = ForecastingModelHelper.PredictMonthWiseBaseModel(_mlContext, outputPathToLoadMonthWiseModel, new MonthBaseModelSampleData
+            var monthWisePrediction = ForecastingModelHelper.PredictMonthWiseBaseModel(_mlContext, outputPathToLoadMonthWiseModel, new MonthBaseModelInputData
             {
                 Month = DateTime.UtcNow.Month + 1, 
                 UnitsSoldCurrent = unitSoldCurrent, 
-                UnitsSoldPrev = unitSoldPrev
+                UnitsSoldPrev = unitSoldPrev,
+                Next = 0
             });
             #endregion
 
@@ -1323,11 +1326,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var locationCumulativePrediction = 0.0;
             foreach(var location in bestLocations)
             {
-                var locationWisePrediction = ForecastingModelHelper.PredictLocationWiseBaseModel(_mlContext, outputPathToLoadLocationWiseModel, new LocationBaseModelSampleData
+                var locationWisePrediction = ForecastingModelHelper.PredictLocationWiseBaseModel(_mlContext, outputPathToLoadLocationWiseModel, new LocationBaseModelInputData
                 {
                     CountryId = location, 
                     UnitsSoldCurrent = unitSoldCurrent, 
-                    UnitsSoldPrev = unitSoldPrev
+                    UnitsSoldPrev = unitSoldPrev,
+                    Next = 0
                 });
                 locationCumulativePrediction += locationWisePrediction;
             }
@@ -1378,6 +1382,69 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             return (float)prediction;
             #endregion
         }
+        public async Task<List<MonthlySalesCategoryContribution>> PredictCategorySalesContribution()
+        {
+            #region Data
+            // get month base prev year sales history 
+            var prevYearMonthlySalesHistory = await MonthBaseSalesHistoryPrevYear();
+            var unitSoldPrev = prevYearMonthlySalesHistory.Count >= 2 ? prevYearMonthlySalesHistory[1].UnitsSoldCurrent : 0;
+            var unitSoldCurrent = prevYearMonthlySalesHistory[0].UnitsSoldCurrent;
+
+            #endregion
+
+            // get top categories 
+            var topCategories = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopSellingCategoriesCacheKey, TopSellingCategories);
+            var bestCategories = topCategories.Select(x => x.CategoryId).ToList();
+            // Get CategoryId to CategoryName mapping
+            var query = from a in _categoryRepository.Table
+                        select new
+                        {
+                            Id = a.Id, 
+                            Name = a.Name
+                        };
+            var queyResult = await query.ToListAsync();
+            var filteredQueryResult = queyResult
+                .Where(x => bestCategories.Contains(x.Id))
+                .Select(x => new
+                {
+                    Id = x.Id,
+                    Name = x.Name
+                });
+            
+            // get prediction from category wise base model (for each top category)
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
+            var outputPathToLoadCategoryWiseModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryWiseBaseModel);
+
+            var contributionList = new List<MonthlySalesCategoryContribution>();
+            var categoryCumulativePrediction = 0.0;
+            foreach (var catetory in filteredQueryResult)
+            {
+                var predictedSalesCategoryWise = ForecastingModelHelper.PredictCategoryWiseBaseModel(_mlContext, outputPathToLoadCategoryWiseModel, new CategoryBaseModelInputData
+                {
+                    CategoryId = catetory.Id,
+                    UnitsSoldPrev = unitSoldPrev,
+                    UnitsSoldCurrent = unitSoldCurrent,
+                    Next = 0
+                });
+                categoryCumulativePrediction += predictedSalesCategoryWise;
+                contributionList.Add(new MonthlySalesCategoryContribution
+                {
+                    CategoryId= catetory.Id,
+                    CategoryName = catetory.Name,
+                    quantity = predictedSalesCategoryWise, 
+                    contribution = 0
+                });
+            }
+            foreach (var contribution in contributionList)
+            {
+                contribution.contribution = ((float)contribution.quantity / (float)categoryCumulativePrediction) * 100; 
+            }
+            return contributionList;
+        }
+        #endregion
+
+        #region Individual Product Sales Prediction
+
         #endregion
     }
 }

@@ -19,5 +19,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models
         public string XLabelName { get; set; }
         public float YLabelValue { get; set; }
 
+        public float? YLabelValuePredicted { get; set; }
+
+        public float? YLabelValueInStock { get; set; }
+
     }
 }
