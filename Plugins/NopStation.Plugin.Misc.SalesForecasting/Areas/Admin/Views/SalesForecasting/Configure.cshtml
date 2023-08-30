@@ -3,69 +3,122 @@
 @{
     ViewBag.PageTitle = T("Admin.NopStation.SalesForecasting.Title").Text;
     NopHtml.SetActiveMenuItemSystemName("PowerBI.Configuration");
-}
 
-@await Component.InvokeAsync("StoreScopeConfiguration")
+    const string hideInfoBlockAttributeName = "SalesForcastingPage.HideInfoBlock";
+    var customer = await workContext.GetCurrentCustomerAsync();
+    var hideInfoBlock = await genericAttributeService.GetAttributeAsync<bool>(customer, hideInfoBlockAttributeName);
+}
 
 <form asp-controller="SalesForecasting" asp-action="Configure" method="post">
     <div class="content-header clearfix">
         <h1 class="float-left">
-            @T("Configure the models")
-            <small>
-                <i class="fas fa-arrow-circle-left"></i>
-                <a asp-action="List">@T("Back")</a>
-            </small>
+            @T("Configure")
         </h1>
+
         <div class="float-right">
             <button type="submit" name="save" class="btn btn-primary">
                 <i class="far fa-save"></i>
                 @T("Admin.Common.Save")
             </button>
-            <button type="submit" name="save-continue" class="btn btn-primary">
-                <i class="far fa-save"></i>
-                @T("Admin.Common.SaveContinue")
-            </button>,
         </div>
     </div>
-    @await Html.PartialAsync("_CreateOrUpdate", Model)
-</form>
+    <div asp-validation-summary="All"></div>
+    <section class="content">
+        <div class="container-fluid">
+            <div class="form-horizontal">
+                <nop-cards id="salesForcasting-cards">
+                    <nop-card asp-name="store-regional-info" asp-icon="fas fa-info" asp-title="@T("Store regional info")" asp-hide-block-attribute-name="@hideInfoBlockAttributeName" asp-hide="@hideInfoBlock" asp-advanced="false">
 
-<form asp-controller="SalesForecasting" asp-action="Configure" method="post">
-    <div class="panel-group">
-        <div class="panel panel-default">
-            <div class="panel-body">
-                <p>@T("Admin.NopStation.SalesForecasting.Instructions")</p>
-                <div class="form-group">
-                    <div class="col-md-3">
-                        <nop-override-store-checkbox asp-for="NumberofBestDemandProduct_OverrideForStore" asp-input="NumberofBestDemandProduct" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
-                        <nop-label asp-for="NumberofBestDemandProduct" />
-                    </div>
-                    <div class="col-md-9">
-                        <nop-editor asp-for="NumberofBestDemandProduct" asp-required="true" />
-                        <span asp-validation-for="NumberofBestDemandProduct"></span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <div class="col-md-9 col-md-offset-3">
-                        <input type="submit" name="save" class="btn bg-primary" value="@T("Admin.Common.Save")" />
-                    </div>
-                </div>
+                        <div class="card-body">
+                            @await Component.InvokeAsync("StoreScopeConfiguration")
+                            <div class="form-group row advanced-setting">
+                                <div class="col-md-3">
+                                    <nop-label asp-for="SaturdayIsWeekend" />
+                                </div>
+                                <div class="col-md-9">
+                                    <nop-editor asp-for="SaturdayIsWeekend" />
+                                    <span asp-validation-for="SaturdayIsWeekend"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row advanced-setting">
+                                <div class="col-md-3">
+                                    <nop-label asp-for="SundayIsWeekend" />
+                                </div>
+                                <div class="col-md-9">
+                                    <nop-editor asp-for="SundayIsWeekend" />
+                                    <span asp-validation-for="SundayIsWeekend"></span>
+                                </div>
+                            </div>
+
+
+
+                            <div class="form-group row advanced-setting">
+                                <div class="col-md-3">
+                                    <nop-label asp-for="MondayIsWeekend" />
+                                </div>
+                                <div class="col-md-9">
+                                    <nop-editor asp-for="MondayIsWeekend" />
+                                    <span asp-validation-for="MondayIsWeekend"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row advanced-setting">
+                                <div class="col-md-3">
+                                    <nop-label asp-for="TuesdayIsWeekend" />
+                                </div>
+                                <div class="col-md-9">
+                                    <nop-editor asp-for="TuesdayIsWeekend" />
+                                    <span asp-validation-for="TuesdayIsWeekend"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row advanced-setting">
+                                <div class="col-md-3">
+                                    <nop-label asp-for="WednesdayIsWeekend" />
+                                </div>
+                                <div class="col-md-9">
+                                    <nop-editor asp-for="WednesdayIsWeekend" />
+                                    <span asp-validation-for="WednesdayIsWeekend"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row advanced-setting">
+                                <div class="col-md-3">
+                                    <nop-label asp-for="ThursdayIsWeekend" />
+                                </div>
+                                <div class="col-md-9">
+                                    <nop-editor asp-for="ThursdayIsWeekend" />
+                                    <span asp-validation-for="ThursdayIsWeekend"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row advanced-setting">
+                                <div class="col-md-3">
+                                    <nop-label asp-for="FridayIsWeekend" />
+                                </div>
+                                <div class="col-md-9">
+                                    <nop-editor asp-for="FridayIsWeekend" />
+                                    <span asp-validation-for="FridayIsWeekend"></span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </nop-card>
+                </nop-cards>
             </div>
         </div>
-    </div>
+    </section>
 </form>
+
 
 <form asp-controller="SalesForecasting" asp-action="TrainModel" method="post">
-    <div class="panel-group">
-        <div class="panel panel-default">
-            <div class="panel-body">
-                <p>@T("Admin.NopStation.SalesForecasting.Model.Instructions")</p>
-                <div class="form-group">
-                    <div class="col-md-9 col-md-offset-3">
-                        <input type="submit" name="save" class="btn bg-primary" value="@T("Admin.NopStation.SalesForecasting.Configure.TrainModel")" />
+    <section class="content">
+        <div class="container-fluid">
+            <div class="form-horizontal">
+                <nop-cards id="salesForcasting-cards">
+                    <div class="form-group">
+                        <div class="col-md-9 col-md-offset-3">
+                            <input type="submit" name="save" class="btn bg-primary" value="@T("Admin.NopStation.SalesForecasting.Configure.TrainModel")" />
+                        </div>
                     </div>
-                </div>
+                </nop-cards>
             </div>
         </div>
-    </div>
+    </section>
 </form>

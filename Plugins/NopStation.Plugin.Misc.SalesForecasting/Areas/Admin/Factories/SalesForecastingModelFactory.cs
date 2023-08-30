@@ -53,6 +53,16 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
             return predictionSearchModel;
         }
 
+        public virtual async Task<ProductGroupModel> PrepareProductGroupModelAsync(ProductGroupModel productGroupModel)
+        {
+            if(productGroupModel == null)
+            {
+                var model = new ProductGroupModel();
+                return model;
+            }
+            return productGroupModel;
+        }
+
         public async Task<IEnumerable<ProductModel>> PrepareProductModelsAsync(IEnumerable<Product> products)
         {
             return await products.SelectAwait(async product =>

@@ -25,7 +25,14 @@
 
 	<ItemGroup>
 	  <None Remove="Areas\Admin\Contents\site.js" />
+	  <None Remove="Areas\Admin\Views\ProductGroup\Create.cshtml" />
+	  <None Remove="Areas\Admin\Views\ProductGroup\Edit.cshtml" />
+	  <None Remove="Areas\Admin\Views\ProductGroup\List.cshtml" />
+	  <None Remove="Areas\Admin\Views\ProductGroup\_CreateOrUpdate.cshtml" />
+	  <None Remove="Areas\Admin\Views\ProductGroup\_CreateOrUpdate.Info.cshtml" />
+	  <None Remove="Areas\Admin\Views\ProductGroup\_CreateOrUpdate.RelatedProducts.cshtml" />
 	  <None Remove="Areas\Admin\Views\SalesForecasting\Configure.cshtml" />
+	  <None Remove="Areas\Admin\Views\SalesForecasting\ProductPrediction.cshtml" />
 	  <None Remove="Areas\Admin\Views\SalesForecasting\SalesPrediction.cshtml" />
 	  <None Remove="Areas\Admin\Views\_ViewImports.cshtml" />
 	  <None Remove="Areas\Admin\Views\_ViewStart.cshtml" />
@@ -51,6 +58,30 @@
 		<ProjectReference Include="..\..\Presentation\Nop.Web\Nop.Web.csproj" />
 		<ProjectReference Include="..\NopStation.Plugin.Misc.Core\NopStation.Plugin.Misc.Core.csproj" />
 		<ClearPluginAssemblies Include="$(MSBuildProjectDirectory)\..\..\Build\ClearPluginAssemblies.proj" />
+	</ItemGroup>
+		
+	<ItemGroup>
+	  <Content Include="Areas\Admin\Views\ProductGroup\Create.cshtml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Areas\Admin\Views\ProductGroup\Edit.cshtml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Areas\Admin\Views\ProductGroup\List.cshtml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Areas\Admin\Views\ProductGroup\_CreateOrUpdate.cshtml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Areas\Admin\Views\ProductGroup\_CreateOrUpdate.Info.cshtml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Areas\Admin\Views\ProductGroup\_CreateOrUpdate.RelatedProducts.cshtml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Areas\Admin\Views\SalesForecasting\ProductPrediction.cshtml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 	
 	<ItemGroup>

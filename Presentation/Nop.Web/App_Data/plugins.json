@@ -86,13 +86,14 @@
     {
       "SystemName": "NopStation.Core",
       "Version": "4.50.1.9"
-    },
-    {
-      "SystemName": "NopStation.Plugin.Misc.SalesForecasting",
-      "Version": "4.50.1.0"
     }
   ],
   "PluginNamesToUninstall": [],
   "PluginNamesToDelete": [],
-  "PluginNamesToInstall": []
+  "PluginNamesToInstall": [
+    {
+      "Item1": "NopStation.Plugin.Misc.SalesForecasting",
+      "Item2": "1f978ef3-a2c1-4228-b8de-d53657c21a51"
+    }
+  ]
 }

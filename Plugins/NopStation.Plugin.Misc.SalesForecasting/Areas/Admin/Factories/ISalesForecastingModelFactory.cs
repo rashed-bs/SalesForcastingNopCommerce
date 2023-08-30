@@ -10,5 +10,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
     {
         Task<PredictionSearchModel> PreparePredictionSearchModel(PredictionSearchModel predictionSearchModel, string defaultValue = "0");
         Task<IEnumerable<ProductModel>> PrepareProductModelsAsync(IEnumerable<Product> products);
+        Task<ProductGroupModel> PrepareProductGroupModelAsync(ProductGroupModel productGroupModel);
     }
 }

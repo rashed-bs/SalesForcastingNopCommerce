@@ -58,7 +58,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
         #endregion
 
         #region Methods
-        
+
+        #region Configure
         public async Task<IActionResult> ConfigureAsync()
         {
             if (!await _permissionService.AuthorizeAsync(SalesForecastingProvider.ManageConfiguration))
@@ -66,15 +67,31 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
             //load settings for a chosen store scope
             var storeScope = await _storeContext.GetActiveStoreScopeConfigurationAsync();
-            var checkOutSettings = await _settingService.LoadSettingAsync<SalesForecastingSettings>(storeScope);
+            var salesForcastingSettings = await _settingService.LoadSettingAsync<SalesForecastingSettings>(storeScope);
 
             var model = new ConfigurationModel
             {
-                NumberofBestDemandProduct = checkOutSettings.NumberofBestDemandProduct
+                NumberofBestDemandProduct = salesForcastingSettings.NumberofBestDemandProduct,
+                FridayIsWeekend = salesForcastingSettings.FridayIsWeekend,
+                SaturdayIsWeekend = salesForcastingSettings.SaturdayIsWeekend, 
+                SundayIsWeekend = salesForcastingSettings.SundayIsWeekend, 
+                MondayIsWeekend = salesForcastingSettings.MondayIsWeekend, 
+                TuesdayIsWeekend = salesForcastingSettings.TuesdayIsWeekend, 
+                WednesdayIsWeekend = salesForcastingSettings.WednesdayIsWeekend, 
+                ThursdayIsWeekend = salesForcastingSettings.ThursdayIsWeekend
             };
 
             if (storeScope > 0)
-                model.NumberofBestDemandProduct_OverrideForStore = await _settingService.SettingExistsAsync(checkOutSettings, x => x.NumberofBestDemandProduct, storeScope);
+            {
+                model.NumberofBestDemandProduct_OverrideForStore = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.NumberofBestDemandProduct, storeScope);
+                model.FridayIsWeekend = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.FridayIsWeekend, storeScope);
+                model.SaturdayIsWeekend = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.SaturdayIsWeekend, storeScope);
+                model.SundayIsWeekend = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.SundayIsWeekend, storeScope);
+                model.MondayIsWeekend = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.MondayIsWeekend, storeScope);
+                model.TuesdayIsWeekend = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.TuesdayIsWeekend, storeScope);
+                model.WednesdayIsWeekend = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.WednesdayIsWeekend, storeScope);
+                model.ThursdayIsWeekend = await _settingService.SettingExistsAsync(salesForcastingSettings, x => x.ThursdayIsWeekend, storeScope);
+            }
 
             return View(model);
         }
@@ -90,17 +107,26 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
             //load settings for a chosen store scope
             var storeScope = await _storeContext.GetActiveStoreScopeConfigurationAsync();
-            var checkOutSettings = await _settingService.LoadSettingAsync<SalesForecastingSettings>(storeScope);
+            var salesForcastingSettings = await _settingService.LoadSettingAsync<SalesForecastingSettings>(storeScope);
 
             //save settings
-            checkOutSettings.NumberofBestDemandProduct = model.NumberofBestDemandProduct;
-
-            /* We do not clear cache after each setting update.
-             * This behavior can increase performance because cached settings will not be cleared 
-             * and loaded from database after each update */
-
-            await _settingService.SaveSettingOverridablePerStoreAsync(checkOutSettings, x => x.NumberofBestDemandProduct, model.NumberofBestDemandProduct_OverrideForStore, storeScope, false);
-
+            salesForcastingSettings.NumberofBestDemandProduct = model.NumberofBestDemandProduct;
+            salesForcastingSettings.FridayIsWeekend = model.FridayIsWeekend;
+            salesForcastingSettings.SaturdayIsWeekend = model.SaturdayIsWeekend;
+            salesForcastingSettings.SundayIsWeekend = model.SundayIsWeekend;
+            salesForcastingSettings.MondayIsWeekend = model.MondayIsWeekend;
+            salesForcastingSettings.TuesdayIsWeekend = model.TuesdayIsWeekend;
+            salesForcastingSettings.WednesdayIsWeekend = model.WednesdayIsWeekend;
+            salesForcastingSettings.ThursdayIsWeekend = model.ThursdayIsWeekend;
+            
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.NumberofBestDemandProduct, model.NumberofBestDemandProduct_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.FridayIsWeekend, model.FridayIsWeekend_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.SaturdayIsWeekend, model.SaturdayIsWeekend_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.SundayIsWeekend, model.SundayIsWeekend_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.MondayIsWeekend, model.MondayIsWeekend_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.TuesdayIsWeekend, model.TuesdayIsWeekend_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.WednesdayIsWeekend, model.WednesdayIsWeekend_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(salesForcastingSettings, x => x.ThursdayIsWeekend, model.ThursdayIsWeekend_OverrideForStore, storeScope, false);
             //now clear settings cache
             await _settingService.ClearCacheAsync();
 
@@ -108,7 +134,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
             return await ConfigureAsync();
         }
+        #endregion
 
+        #region Model
         [EditAccess, HttpPost]
         public async Task<IActionResult> TrainModelAsync()
         {
@@ -355,6 +383,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             }
             return Json(salesResponse);
         }
+
+        #endregion
 
         #endregion
     }
