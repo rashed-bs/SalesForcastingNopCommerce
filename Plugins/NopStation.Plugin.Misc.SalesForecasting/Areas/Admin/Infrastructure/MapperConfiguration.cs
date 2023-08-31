@@ -2,6 +2,7 @@
 using Nop.Core.Infrastructure.Mapper;
 using NopStation.Plugin.Misc.Core.Models;
 using NopStation.Plugin.Misc.SalesForecasting;
+using NopStation.Plugin.Misc.SalesForecasting.Domain;
 
 namespace NopStation.Plugin.Misc.PowerBI.Areas.Admin.Infrastructure
 {

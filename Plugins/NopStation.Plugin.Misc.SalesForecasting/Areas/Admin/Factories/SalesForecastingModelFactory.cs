@@ -14,6 +14,9 @@ using Nop.Web.Areas.Admin.Models.Catalog;
 using Nop.Core.Domain.Catalog;
 using Nop.Web.Areas.Admin.Infrastructure.Mapper.Extensions;
 using Nop.Services.Media;
+using NopStation.Plugin.Misc.SalesForecasting.Domain;
+using Nop.Web.Framework.Models.Extensions;
+using System;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
 {
@@ -24,10 +27,14 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
         private readonly ISalesForecastingService _mLModelService;
         private readonly IProductService _productService;
         private readonly IPictureService _pictureService;
+        private readonly IRepository<GroupRelatedProduct> _groupRelatedProductRepository;
+        protected readonly IRepository<Product> _productRepository;
         public SalesForecastingModelFactory(ILocalizationService localizationService,
             ICategoryService categoryService,
             ISalesForecastingService mLModelService,
             IProductService productService,
+            IRepository<GroupRelatedProduct> groupRelatedProductRepository,
+            IRepository<Product> productRepository,
             IPictureService pictureService)
         {
             _categoryService = categoryService;
@@ -35,6 +42,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
             _mLModelService = mLModelService;
             _productService = productService;
             _pictureService = pictureService;
+            _productRepository = productRepository;
+            _groupRelatedProductRepository = groupRelatedProductRepository;
         }
 
         public async Task<PredictionSearchModel> PreparePredictionSearchModel(PredictionSearchModel predictionSearchModel, string defaultValue = "0")
@@ -53,14 +62,24 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
             return predictionSearchModel;
         }
 
-        public virtual async Task<ProductGroupModel> PrepareProductGroupModelAsync(ProductGroupModel productGroupModel)
+        public virtual async Task<ProductGroupModel> PrepareProductGroupModelAsync(ProductGroupModel productGroupModel, ProductGroup productGroup)
         {
+            if(productGroupModel == null && productGroup == null)
+            {
+                return new ProductGroupModel();
+            } 
             if(productGroupModel == null)
             {
                 var model = new ProductGroupModel();
+                model.Id = productGroup.Id;
+                model.IsActive = productGroup.IsActive;
+                model.GroupName = productGroup.GroupName;
+                model.DiscountAppliedFrequently = productGroup.DiscountAppliedFrequently;
+                model.RelatedProductGroupSearchModel = new RelatedProductGroupSearchModel();
+                model.RelatedProductGroupSearchModel.ProductGroupId = productGroup.Id;
                 return model;
             }
-            return productGroupModel;
+            return new ProductGroupModel();
         }
 
         public async Task<IEnumerable<ProductModel>> PrepareProductModelsAsync(IEnumerable<Product> products)
@@ -76,6 +95,41 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
                 (productModel.PictureThumbnailUrl, _) = await _pictureService.GetPictureUrlAsync(defaultProductPicture, 75);
                 return productModel;
             }).ToListAsync();
+        }
+
+
+        public virtual async Task<RelatedProductGroupListModel> PrepareRelatedProductListModelAsync(RelatedProductGroupSearchModel searchModel, ProductGroup productGroup)
+        {
+            if (searchModel == null)
+                throw new ArgumentNullException(nameof(searchModel));
+
+            if (productGroup == null)
+                throw new ArgumentNullException(nameof(productGroup));
+
+            var query = from rp in _groupRelatedProductRepository.Table 
+                        where rp.ProductId1 == productGroup.Id
+                        select rp;
+            var relatedProducts = (await query.ToListAsync()).ToPagedList(searchModel);
+
+            //prepare grid model
+            var model = await new RelatedProductGroupListModel().PrepareToGridAsync(searchModel, relatedProducts, () =>
+            {
+                return relatedProducts.SelectAwait(async relatedProduct =>
+                {
+                    var relatedProductGroupModel = new RelatedProductGroupModel()
+                    {
+                        Id = relatedProduct.Id,
+                        ProductId2 = relatedProduct.ProductId2,
+                        DisplayOrder = relatedProduct.DisplayOrder,
+                    };
+
+                    //fill in additional values (not existing in the entity)
+                    relatedProductGroupModel.Product2Name = (await _productService.GetProductByIdAsync(relatedProduct.ProductId2))?.Name;
+
+                    return relatedProductGroupModel;
+                });
+            });
+            return model;
         }
     }
 }

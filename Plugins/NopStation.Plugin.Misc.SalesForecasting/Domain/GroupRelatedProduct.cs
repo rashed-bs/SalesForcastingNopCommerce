@@ -9,8 +9,19 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Domain
 {
     public class GroupRelatedProduct : BaseEntity
     {
-        public string Product1 { get; set; }
-        public string Product2 { get; set; }
+        /// <summary>
+        /// Gets or sets the first product identifier
+        /// </summary>
+        public int ProductId1 { get; set; }
+
+        /// <summary>
+        /// Gets or sets the second product identifier
+        /// </summary>
+        public int ProductId2 { get; set; }
+
+        /// <summary>
+        /// Gets or sets the display order
+        /// </summary>
         public int DisplayOrder { get; set; }
 
     }
