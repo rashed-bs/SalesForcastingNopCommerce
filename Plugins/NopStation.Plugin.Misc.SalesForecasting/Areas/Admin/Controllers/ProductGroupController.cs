@@ -296,6 +296,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
         #region Train / Forcasting
 
+        [HttpPost]
+        public virtual async Task<IActionResult> TrainAndForcastProductGroup(ProductGroupModel productGroupModel)
+        {
 
 
 
@@ -303,6 +306,22 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
 
 
+
+
+
+
+
+
+            return Ok();
+        }
+
+
+
+
+        public virtual async Task<GroupProductPredictionListModel> ProductGroupPredictionList(GroupProductPredictionSearchModel groupProductPredictionSearchModel)
+        {
+            return null;
+        }
 
 
 

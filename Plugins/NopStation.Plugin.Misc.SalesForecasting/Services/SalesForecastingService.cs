@@ -1444,8 +1444,19 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         #endregion
 
         #region Individual Product Sales Prediction
-        
 
+        #region Train 
+
+
+
+        #endregion
+
+
+        #region Forcast 
+
+
+
+        #endregion
 
         #endregion
     }

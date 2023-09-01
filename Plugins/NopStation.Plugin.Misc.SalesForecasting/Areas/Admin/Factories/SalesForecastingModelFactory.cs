@@ -80,6 +80,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
                 model.DiscountAppliedFrequently = productGroup.DiscountAppliedFrequently;
                 model.RelatedProductGroupSearchModel = new RelatedProductGroupSearchModel();
                 model.RelatedProductGroupSearchModel.ProductGroupId = productGroup.Id;
+                model.GroupProductPredictionSearchModel = new GroupProductPredictionSearchModel();
+                model.GroupProductPredictionSearchModel.ProductGroupId = productGroup.Id;
                 return model;
             }
             return new ProductGroupModel();

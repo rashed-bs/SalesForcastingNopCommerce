@@ -19,5 +19,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models
         public bool DiscountAppliedFrequently { get; set; }
 
         public RelatedProductGroupSearchModel RelatedProductGroupSearchModel { get; set; }
+        public GroupProductPredictionSearchModel GroupProductPredictionSearchModel { get; set; }
     }
 }
