@@ -11,7 +11,7 @@
     var hideSearchBlock = await genericAttributeService.GetAttributeAsync<bool>(await workContext.GetCurrentCustomerAsync(), hideSearchBlockAttributeName);
 }
 
-<form asp-controller="Product" asp-action="List" method="post">
+<form asp-controller="ProductGroup" asp-action="ProductGroupList" method="post">
 
     <div class="content-header clearfix">
         <h1 class="float-left">
@@ -30,8 +30,6 @@
             <nop-action-confirmation asp-button-id="delete-selected" />
         </div>
     </div>
-
-
 
     <section class="content">
         <div class="container-fluid">
@@ -71,6 +69,7 @@
                                         </div>
                                     </div>
                                 </div>
+
                                 <div class="row">
                                     <div class="text-center col-12">
                                         <button type="button" id="search-products" class="btn btn-primary btn-search">
@@ -89,7 +88,7 @@
                             @await Html.PartialAsync("Table", new DataTablesModel
                             {
                             Name = "product-group-grid",
-                            UrlRead = new DataUrl("ProductGroupList", "SalesForecasting", null),
+                            UrlRead = new DataUrl("ProductGroupList", "ProductGroup", null),
                             SearchButtonId = "search-products",
                             Length = Model.PageSize,
                             LengthMenu = Model.AvailablePageSizes,
@@ -116,6 +115,11 @@
                             Title = T("IsActive").Text,
                             Width = "100"
                             },
+                            new ColumnProperty(nameof(ProductGroupModel.DiscountAppliedFrequently))
+                            {
+                            Title = T("DisCountAppliedFrequently").Text,
+                            Width = "100"
+                            },
                             new ColumnProperty(nameof(ProductGroupModel.Id))
                             {
                             Title = T("Admin.Common.Edit").Text,
@@ -136,7 +140,7 @@
                                         $.ajax({
                                             cache: false,
                                             type: "POST",
-                                            url: "@(Url.Action("DeleteProductGroupsSelected", "SalesForecasting"))",
+                                            url: "@(Url.Action("DeleteProductGroupsSelected", "ProductGroup"))",
                                             data: postData,
                                             error: function (jqXHR, textStatus, errorThrown) {
                                                 showAlert('deleteSelectedFailed', errorThrown);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -80,7 +81,36 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
         #region Methods 
 
         #region List
+        public virtual IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
+        public virtual async Task<IActionResult> List()
+        {
+            //prepare model
+            var model =  _salesForecastingModelFactory.PrepareProductGroupSearchModelAsync(new GroupProductSearchModel());
+
+            return View(model);
+        }
+
+        public virtual async Task<IActionResult> ProductGroupList(GroupProductSearchModel searchModel)
+        {
+            var model = await _salesForecastingModelFactory.PrepareProductGroupListModelAsync(searchModel);
+            return Json(model);
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> DeleteProductGroupsSelected(ICollection<int> selectedIds)
+        {
+            if (selectedIds == null || selectedIds.Count == 0)
+                return NoContent();
+
+            await _productGroupRepository.DeleteAsync((await _productGroupRepository.GetByIdsAsync(selectedIds.ToArray())));
+            return Json(new { Result = true });
+        }
+
+        
         #endregion
 
         #region Create / Edit / Delete
@@ -261,6 +291,20 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
             return View(new AddRelatedProductSearchModel());
         }
+
+        #endregion
+
+        #region Train / Forcasting
+
+
+
+
+
+
+
+
+
+
 
         #endregion
 

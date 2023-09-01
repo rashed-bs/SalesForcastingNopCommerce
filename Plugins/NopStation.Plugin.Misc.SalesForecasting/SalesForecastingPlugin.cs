@@ -127,7 +127,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting
                 {
                     Visible = true,
                     IconClass = "far fa-circle",
-                    Url = "~/Admin/ProductGroup/Create",
+                    Url = "~/Admin/ProductGroup/Index",
                     Title = await _localizationService.GetResourceAsync("Admin.NopStation.SalesForecasting.Menu.ProductPrediction"),
                     SystemName = "SalesForecasting.ProductPrediction"
                 };
