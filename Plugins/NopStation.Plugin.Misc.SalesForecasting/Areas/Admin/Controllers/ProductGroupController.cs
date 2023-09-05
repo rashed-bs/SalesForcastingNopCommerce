@@ -35,6 +35,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
         #region Fields
         private readonly IRepository<ProductGroup> _productGroupRepository;
         private readonly IRepository<GroupRelatedProduct> _groupRelatedProductRepository;
+        private readonly IRepository<GroupProductsPrediction> _groupProductsPredictionRepository;
         private readonly ILocalizationService _localizationService;
         private readonly INotificationService _notificationService;
         private readonly IPermissionService _permissionService;
@@ -60,6 +61,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             IProductModelFactory productModelFactory,
             IWorkContext workContext,
             IRepository<GroupRelatedProduct> groupRelatedProductRepository,
+            IRepository<GroupProductsPrediction> groupProductsPredictionRepository,
             IRepository<ProductGroup> productGroupRepository)
         {
             _localizationService = localizationService;
@@ -74,6 +76,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             _productGroupRepository = productGroupRepository;
             _workContext = workContext;
             _groupRelatedProductRepository = groupRelatedProductRepository;
+            _groupProductsPredictionRepository = groupProductsPredictionRepository;
         }
 
         #endregion
@@ -235,7 +238,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
                 ?? throw new ArgumentException("No related product found with the specified id");
 
             await _groupRelatedProductRepository.DeleteAsync(relatedProduct);
-
+            await _groupProductsPredictionRepository.DeleteAsync(x => x.ProductId == id);
             return new NullJsonResult();
         }
 
@@ -299,28 +302,41 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
         [HttpPost]
         public virtual async Task<IActionResult> TrainAndForcastProductGroup(ProductGroupModel productGroupModel)
         {
+            var productGroup = await _productGroupRepository.GetByIdAsync(productGroupModel.Id);
+            // get all the products of this product group 
+            var query = from pq in _groupRelatedProductRepository.Table
+                        where pq.ProductId1 == productGroup.Id
+                        select pq.ProductId2;
+            var productIds = (await query.ToListAsync()).ToArray();
+            var products = await _productService.GetProductsByIdsAsync(productIds);
 
+            // delete prediction record from db for this product group 
+            await _groupProductsPredictionRepository.DeleteAsync(prediction => prediction.ProductGroupId == productGroup.Id);
 
+            foreach (var product in products)
+            {
 
-
-
-
-
-
-
-
-
-
-
+                // prepare, train model and save the model 
+                var status = await _salesForecastingService.TrainIndividualProductWeeklySalesPredictionModelAsync(product, productGroup.DiscountAppliedFrequently, false);
+                // prepare prediction entity (create a new domain) and store globally 
+                var score = await _salesForecastingService.PredictSaleForEachIndividualProduct(product, productGroup.DiscountAppliedFrequently);
+                var groupProductPrediction = new GroupProductsPrediction()
+                {
+                    ProductGroupId = productGroup.Id,
+                    ProductId = product.Id,
+                    WeeklyUnitPrediction = (int)score,
+                    WeeklyMonetaryPrediction = (float)score * (float)product.Price,
+                };
+                await _groupProductsPredictionRepository.InsertAsync(groupProductPrediction);
+            }
+            
             return Ok();
         }
 
-
-
-
-        public virtual async Task<GroupProductPredictionListModel> ProductGroupPredictionList(GroupProductPredictionSearchModel groupProductPredictionSearchModel)
+        public virtual async Task<IActionResult> ProductGroupPredictionList(GroupProductPredictionSearchModel searchModel)
         {
-            return null;
+            var model = await _salesForecastingModelFactory.PrepareIndividualProductPredictionListModelAsync(searchModel);
+            return Json(model);
         }
 
 

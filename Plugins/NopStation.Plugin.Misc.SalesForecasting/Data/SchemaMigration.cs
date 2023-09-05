@@ -10,7 +10,7 @@ using NopStation.Plugin.Misc.SalesForecasting.Domain;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Data
 {
-    [NopMigration("2023/08/30 11:00:00:6455422", "Misc.Sales Forcasting Migration", MigrationProcessType.Installation)]
+    [NopMigration("2023/09/04 11:00:00:6455421", "Misc.Sales Forcasting Migration", MigrationProcessType.Installation)]
     public class SchemaMigration : AutoReversingMigration
     {
         #region Methods
@@ -22,6 +22,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Data
         {
             Create.TableFor<ProductGroup>();
             Create.TableFor<GroupRelatedProduct>();
+            Create.TableFor<GroupProductsPrediction>();
         }
 
         #endregion

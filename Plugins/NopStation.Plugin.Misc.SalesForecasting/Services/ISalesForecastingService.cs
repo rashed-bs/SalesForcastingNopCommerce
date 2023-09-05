@@ -1,4 +1,5 @@
 ﻿using Microsoft.ML;
+using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Models;
 using NopStation.Plugin.Misc.SalesForecasting.Models;
@@ -21,6 +22,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         Task<(bool, string)> TrainBaseCategoryAvgPriceWiseProductSalesPredictionModelAsync(bool logInfo = false);
 
         Task<(bool, string)> TrainBaseMonthWiseProductSalesPredictionModelAsync(bool logInfo = false);
+        Task<(bool, string)> TrainIndividualProductWeeklySalesPredictionModelAsync(Product product, bool DiscountAppliedFrequently, bool logInfo = false);
+        Task<float> PredictSaleForEachIndividualProduct(Product product, bool DiscountAppliedFrequently);
 
         Task<List<SalesData>> DailySalesHistoryQueryLastMonth();
 
@@ -32,5 +35,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         Task<float> PredictEnsembleNextMonthSales();
 
         public void PathPreparation();
+
+
     }
 }

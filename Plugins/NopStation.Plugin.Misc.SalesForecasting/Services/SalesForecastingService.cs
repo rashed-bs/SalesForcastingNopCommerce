@@ -29,6 +29,8 @@ using NopStation.Plugin.Misc.SalesForecasting.Models.DataPreprocessingModels;
 using NopStation.Plugin.Misc.SalesForecasting.Helpers;
 using NUglify.Helpers;
 using System.Runtime.Intrinsics.X86;
+using DocumentFormat.OpenXml.Bibliography;
+using System.Globalization;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Services
 {
@@ -36,54 +38,54 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
     public partial class SalesForecastingService : ISalesForecastingService
     {
         #region ctor
-            private readonly IRepository<Order> _orderRepository;
-            private readonly IRepository<ProductCategory> _productCategoryRepository;
-            private readonly IRepository<OrderItem> _orderItemRepository;
-            private readonly IRepository<Address> _addressRepository;
-            private readonly IRepository<Product> _productRepository;
-            private readonly IRepository<Category> _categoryRepository;
-            private readonly IStaticCacheManager _staticCacheManager;
-            private readonly INopFileProvider _fileProvider;
-            private readonly ICategoryService _categoryService;
-            private readonly IStoreContext _storeContext;
-            private readonly IDiscountService _discountService;
-            private readonly IProductService _productService;
-            private readonly SalesForecastingSettings _inventoryPredictionSettings;
-            private readonly ILogger _logger;
-            private readonly MLContext _mlContext = new MLContext(seed: 0);
+        private readonly IRepository<Order> _orderRepository;
+        private readonly IRepository<ProductCategory> _productCategoryRepository;
+        private readonly IRepository<OrderItem> _orderItemRepository;
+        private readonly IRepository<Address> _addressRepository;
+        private readonly IRepository<Product> _productRepository;
+        private readonly IRepository<Category> _categoryRepository;
+        private readonly IStaticCacheManager _staticCacheManager;
+        private readonly INopFileProvider _fileProvider;
+        private readonly ICategoryService _categoryService;
+        private readonly IStoreContext _storeContext;
+        private readonly IDiscountService _discountService;
+        private readonly IProductService _productService;
+        private readonly SalesForecastingSettings _inventoryPredictionSettings;
+        private readonly ILogger _logger;
+        private readonly MLContext _mlContext = new MLContext(seed: 0);
 
-            public SalesForecastingService(
-                IRepository<Order> orderRepository,
-                IRepository<ProductCategory> productCategoryRepository,
-                IRepository<OrderItem> orderItemRepository,
-                IRepository<Product> productRepository,
-                IStaticCacheManager staticCacheManager,
-                IRepository<Category> categoryRepository,
-                IDiscountService discountService,
-                INopFileProvider fileProvider,
-                ICategoryService categoryService,
-                IStoreContext storeContext,
-                IProductService productService,
-                IRepository<Address> addressRepository,
-                SalesForecastingSettings inventoryPredictionSettings,
-                ILogger logger)
-            {
-                _orderRepository = orderRepository;
-                _productCategoryRepository = productCategoryRepository;
-                _orderItemRepository = orderItemRepository;
-                _productRepository = productRepository;
-                _staticCacheManager = staticCacheManager;
-                _fileProvider = fileProvider;
-                _categoryService = categoryService;
-                _categoryRepository = categoryRepository;
-                _categoryService = categoryService;
-                _storeContext = storeContext;
-                _productService = productService;
-                _addressRepository = addressRepository;
-                _discountService = discountService;
-                _inventoryPredictionSettings = inventoryPredictionSettings;
-                _logger = logger;
-            }
+        public SalesForecastingService(
+            IRepository<Order> orderRepository,
+            IRepository<ProductCategory> productCategoryRepository,
+            IRepository<OrderItem> orderItemRepository,
+            IRepository<Product> productRepository,
+            IStaticCacheManager staticCacheManager,
+            IRepository<Category> categoryRepository,
+            IDiscountService discountService,
+            INopFileProvider fileProvider,
+            ICategoryService categoryService,
+            IStoreContext storeContext,
+            IProductService productService,
+            IRepository<Address> addressRepository,
+            SalesForecastingSettings inventoryPredictionSettings,
+            ILogger logger)
+        {
+            _orderRepository = orderRepository;
+            _productCategoryRepository = productCategoryRepository;
+            _orderItemRepository = orderItemRepository;
+            _productRepository = productRepository;
+            _staticCacheManager = staticCacheManager;
+            _fileProvider = fileProvider;
+            _categoryService = categoryService;
+            _categoryRepository = categoryRepository;
+            _categoryService = categoryService;
+            _storeContext = storeContext;
+            _productService = productService;
+            _addressRepository = addressRepository;
+            _discountService = discountService;
+            _inventoryPredictionSettings = inventoryPredictionSettings;
+            _logger = logger;
+        }
 
         #endregion
 
@@ -109,6 +111,11 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             if (_fileProvider.DirectoryExists(mLModelPathTime))
                 _fileProvider.DeleteDirectory(mLModelPathTime);
             _fileProvider.CreateDirectory(mLModelPathTime);
+            
+            var mLModelPathInd = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathIndividualProductForcasting);
+            if (_fileProvider.DirectoryExists(mLModelPathInd))
+                _fileProvider.DeleteDirectory(mLModelPathInd);
+            _fileProvider.CreateDirectory(mLModelPathInd);
 
             var mlMonthlyModelPathTime = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathTimeSeries);
             if (_fileProvider.DirectoryExists(mlMonthlyModelPathTime))
@@ -228,7 +235,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var sortedDiscounts = allDiscountsWithoutNull.OrderBy(discount => discount.StartDateUtc.Value).ToList();
 
             int datasetPointer = 0;
-            foreach(var discount in sortedDiscounts)
+            foreach (var discount in sortedDiscounts)
             {
                 DateTime startDate = discount.StartDateUtc.Value;
                 while (datasetPointer < dataset.Count && GetDateTime(dataset[datasetPointer]) < startDate)
@@ -291,7 +298,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                     AvgPrice = (float)g.Sum(x => x.OrderTotal) / g.Sum(x => x.Unit)
                 });
 
-            foreach (var  categoryAvgPrice in categoryAvgPriceInformations)
+            foreach (var categoryAvgPrice in categoryAvgPriceInformations)
             {
                 avgPriceMap[categoryAvgPrice.CategoryId] = categoryAvgPrice.AvgPrice;
             }
@@ -314,9 +321,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             var queryResult = await query.ToListAsync();
             queryResult.ForEach(x => x.CategoryId = categorySubToRoot[x.CategoryId]);
-            var monthlyCategoryWiseSales = queryResult.GroupBy(x => new {x.OrderDate.Year,x.OrderDate.Month,x.CategoryId })
+            var monthlyCategoryWiseSales = queryResult.GroupBy(x => new { x.OrderDate.Year, x.OrderDate.Month, x.CategoryId })
                 .Select(g => new CategoryTotalSelling
-                {  
+                {
                     CategoryId = g.Key.CategoryId,
                     CumulativeOrderTotal = (float)g.Sum(x => x.OrderTotal)
                 });
@@ -360,6 +367,13 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             int year = (int)salesData.Year;
             int month = (int)salesData.Month;
             int day = (int)salesData.Day;
+            return new DateTime(year, month, day);
+        }
+        private static DateTime GetDateTime(ProductDailyGroupedTrainData productDailyGroupedTrainData)
+        {
+            int year = (int)productDailyGroupedTrainData.Year;
+            int month = (int)productDailyGroupedTrainData.Month;
+            int day = (int)productDailyGroupedTrainData.Day;
             return new DateTime(year, month, day);
         }
         private async Task<List<List<CategoryAvgPrice>>> GetCategoryGroups()
@@ -452,9 +466,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                             Day = sd.Day,
                             Month = sd.Month,
                             IsWeekend = weekends.Contains((int)sd.OrderDate.DayOfWeek) ? (float)1.0 : (float)0.0,
-                            NextDayUnits = sd.NextDayUnits, 
-                            PreviousDayUnits = sd.PreviousDayUnits, 
-                            PercentageDiscount = 0, 
+                            NextDayUnits = sd.NextDayUnits,
+                            PreviousDayUnits = sd.PreviousDayUnits,
+                            PercentageDiscount = 0,
                             ShippingCharge = sd.ShippingCharge
                         };
 
@@ -464,7 +478,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             {
                 //return FillMissingValues(salesData, weekends);
                 DateTime startDate = GetDateTime(salesData[0]);
-                DateTime endDate = GetDateTime(salesData[salesData.Count-1]);
+                DateTime endDate = GetDateTime(salesData[salesData.Count - 1]);
                 var dataRecordPossible = endDate.Subtract(startDate).Days;
                 var dataRecordAvaiable = salesData.Count;
                 var percentageOfDataAvaiable = ((float)dataRecordAvaiable / (float)dataRecordPossible) * 100;
@@ -529,7 +543,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                                 CategoryID = fsd.CategoryID,
                                 ShippingCharge = fsd.ShippingCharge,
                                 PercentageDiscount = 0,
-                                PreviousDayUnits =fsd.UnitsSold,
+                                PreviousDayUnits = fsd.UnitsSold,
                                 NextDayUnits = fsd.UnitsSold
                             }
                         )
@@ -582,7 +596,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                             Day = fcoi.OrderDate.Day,
                             CategoryId = fcoi.CategoryId,
                             CountryId = fcoi.CategoryId,
-                            IsWeekend = weekends.Contains(fcoi.OrderDate.Day) ? 1 : 0, 
+                            IsWeekend = weekends.Contains(fcoi.OrderDate.Day) ? 1 : 0,
                             Units = fcoi.Units // this is to predict
                         };
             return await query.ToListAsync();
@@ -740,7 +754,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                         group goi by new { goi.Year, goi.Month } into ggoi
                         select new MonthBaseModelInputData
                         {
-                            Month = (int)ggoi.Key.Month, 
+                            Month = (int)ggoi.Key.Month,
                             UnitsSoldCurrent = (float)ggoi.Sum(x => x.Unit)
                         };
             var queryResult = await query.ToListAsync();
@@ -749,7 +763,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 Month = x.Month,
                 UnitsSoldCurrent = x.UnitsSoldCurrent,
                 UnitsSoldPrev = index > 0 ? (float)queryResult[index - 1].UnitsSoldCurrent : 0,
-                Next = index < queryResult.Count - 1  ? (float)queryResult[index + 1].UnitsSoldCurrent : 0
+                Next = index < queryResult.Count - 1 ? (float)queryResult[index + 1].UnitsSoldCurrent : 0
             }).ToList();
 
             MiscHelpers.Shuffle(monthWiseMonthlySalesWithLabel);
@@ -770,7 +784,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                                       })
                          group goi by new { goi.Year, goi.Month } into ggoi
                          orderby ggoi.Key.Year descending, ggoi.Key.Month ascending
-                         select new 
+                         select new
                          {
                              Year = ggoi.Key.Year,
                              Month = (int)ggoi.Key.Month,
@@ -941,10 +955,10 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var filledDataset = new List<SalesData>();
             var prevNextUnitsCache = new Dictionary<string, Tuple<float, float>>(); // Cache previous and next units
 
-            foreach(var eachSale  in dataset)
+            foreach (var eachSale in dataset)
             {
                 string key = $"{eachSale.Month}_{eachSale.Day}";
-                prevNextUnitsCache[key] = new Tuple<float,float>(eachSale.PreviousDayUnits, eachSale.NextDayUnits);
+                prevNextUnitsCache[key] = new Tuple<float, float>(eachSale.PreviousDayUnits, eachSale.NextDayUnits);
             }
 
             for (int i = 0; i < dataset.Count; i++)
@@ -968,7 +982,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                         float cherryPickedPrevValue = 0;
                         float cherryPickedNextValue = 0;
 
-                        if(prevNextUnitsCache.ContainsKey(key))
+                        if (prevNextUnitsCache.ContainsKey(key))
                         {
                             cherryPickedPrevValue = prevNextUnitsCache[key].Item1;
                             cherryPickedNextValue = prevNextUnitsCache[key].Item2;
@@ -1065,7 +1079,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             // get the category groups 
             var categoryGroups = await GetCategoryGroups();
-            
+
             // save the group in cache
             await _staticCacheManager.SetAsync(_staticCacheManager.PrepareKeyForDefaultCache(SalesForecastingDefaults.CategoryGroupsCacheKey), categoryGroups);
 
@@ -1074,15 +1088,15 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             {
                 // get data for each category group 
                 List<int> categories = new();
-                foreach(var item in categoryGroup)
+                foreach (var item in categoryGroup)
                 {
                     categories.Add(item.CategoryId);
                 }
                 // get sales data
                 var salesTrainHistory = await DailySalesHistoryQuery(categories);
-                var modelName = $"{categories[0].ToString()}"+"timeSeriesModel.zip";
+                var modelName = $"{categories[0].ToString()}" + "timeSeriesModel.zip";
                 var outputPathToSaveModel = _fileProvider.Combine(mlWeeklyModelPath, modelName);
-                if(salesTrainHistory.Count() > 14)
+                if (salesTrainHistory.Count() > 14)
                 {
                     // add the discount data to it 
                     salesTrainHistory = await AddDiscountData(salesTrainHistory);
@@ -1110,13 +1124,13 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 modelPredictions.Add(predictions);
             }
             var finalPredictionsFromAlltheCategories = new List<float>();
-            for(int i = 0;i < 7;i++)
+            for (int i = 0; i < 7; i++)
             {
                 finalPredictionsFromAlltheCategories.Add(0);
             }
             foreach (var predictions in modelPredictions)
             {
-                for(int i = 0;i < predictions.ForecastedWeeklySalesUnits.Count();i++)
+                for (int i = 0; i < predictions.ForecastedWeeklySalesUnits.Count(); i++)
                 {
                     finalPredictionsFromAlltheCategories[i] += float.Max(0, predictions.ForecastedWeeklySalesUnits[i]);
                 }
@@ -1168,7 +1182,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
         }
 
         #endregion
-        
+
         #region Base Location Model Methods
         public async Task<(bool, string)> TrainBaseLocationWiseProductSalesPredictionModelAsync(bool logInfo = false)
         {
@@ -1205,7 +1219,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
             var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryAvgPriceWiseBaseModel);
-            
+
             // save the training data to a csv file 
             CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
@@ -1274,12 +1288,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToLoadCategoryWiseModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryWiseBaseModel);
 
             var categoryCumulativePrediction = 0.0;
-            foreach (var catetory in  topCategories)
+            foreach (var catetory in topCategories)
             {
                 var predictedSalesCategoryWise = ForecastingModelHelper.PredictCategoryWiseBaseModel(_mlContext, outputPathToLoadCategoryWiseModel, new CategoryBaseModelInputData
                 {
                     CategoryId = catetory.CategoryId,
-                    UnitsSoldPrev = unitSoldPrev, 
+                    UnitsSoldPrev = unitSoldPrev,
                     UnitsSoldCurrent = unitSoldCurrent,
                     Next = 0
                 });
@@ -1298,7 +1312,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 {
                     CategoryId = catetory.CategoryId,
                     CategoryAvgPrice = categoryAvgPrices.ContainsKey(catetory.CategoryId) ? categoryAvgPrices[catetory.CategoryId] : 0,
-                    UnitsSoldCurrent = unitSoldCurrent, 
+                    UnitsSoldCurrent = unitSoldCurrent,
                     UnitsSoldPrev = unitSoldPrev,
                     Next = 0
                 });
@@ -1311,8 +1325,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToLoadMonthWiseModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesMonthWiseBaseModel);
             var monthWisePrediction = ForecastingModelHelper.PredictMonthWiseBaseModel(_mlContext, outputPathToLoadMonthWiseModel, new MonthBaseModelInputData
             {
-                Month = DateTime.UtcNow.Month + 1, 
-                UnitsSoldCurrent = unitSoldCurrent, 
+                Month = DateTime.UtcNow.Month + 1,
+                UnitsSoldCurrent = unitSoldCurrent,
                 UnitsSoldPrev = unitSoldPrev,
                 Next = 0
             });
@@ -1324,12 +1338,12 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var topOrderingLocations = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopOrderingLocationsCacheKey, TopOrderingLocations);
             var bestLocations = topOrderingLocations.Select(c => c.CountryId).ToList();
             var locationCumulativePrediction = 0.0;
-            foreach(var location in bestLocations)
+            foreach (var location in bestLocations)
             {
                 var locationWisePrediction = ForecastingModelHelper.PredictLocationWiseBaseModel(_mlContext, outputPathToLoadLocationWiseModel, new LocationBaseModelInputData
                 {
-                    CountryId = location, 
-                    UnitsSoldCurrent = unitSoldCurrent, 
+                    CountryId = location,
+                    UnitsSoldCurrent = unitSoldCurrent,
                     UnitsSoldPrev = unitSoldPrev,
                     Next = 0
                 });
@@ -1344,14 +1358,14 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             string categoryAccuracyText = File.ReadAllText(outputPathToLoadCategoryWiseModel + "metric.txt");
             if (float.TryParse(categoryAccuracyText, out float catVal))
             {
-                categoryAccuracy = float.Max( catVal, (float)categoryAccuracy);
+                categoryAccuracy = float.Max(catVal, (float)categoryAccuracy);
             }
 
             var avgPriceAccuracy = 0.0;
             string categoryAvgPriceAccuracyText = File.ReadAllText(outputPathToLoadCategoryAvgPriceWiseModel + "metric.txt");
             if (float.TryParse(categoryAvgPriceAccuracyText, out float avgVal))
             {
-                avgPriceAccuracy = float.Max( avgVal, (float)avgPriceAccuracy);
+                avgPriceAccuracy = float.Max(avgVal, (float)avgPriceAccuracy);
             }
 
             var monthAccuracy = 0.0;
@@ -1399,7 +1413,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var query = from a in _categoryRepository.Table
                         select new
                         {
-                            Id = a.Id, 
+                            Id = a.Id,
                             Name = a.Name
                         };
             var queyResult = await query.ToListAsync();
@@ -1410,7 +1424,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                     Id = x.Id,
                     Name = x.Name
                 });
-            
+
             // get prediction from category wise base model (for each top category)
             var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelMonthlyPredictionPathEnsemble);
             var outputPathToLoadCategoryWiseModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryWiseBaseModel);
@@ -1429,15 +1443,15 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                 categoryCumulativePrediction += predictedSalesCategoryWise;
                 contributionList.Add(new MonthlySalesCategoryContribution
                 {
-                    CategoryId= catetory.Id,
+                    CategoryId = catetory.Id,
                     CategoryName = catetory.Name,
-                    quantity = predictedSalesCategoryWise, 
+                    quantity = predictedSalesCategoryWise,
                     contribution = 0
                 });
             }
             foreach (var contribution in contributionList)
             {
-                contribution.contribution = ((float)contribution.quantity / (float)categoryCumulativePrediction) * 100; 
+                contribution.contribution = ((float)contribution.quantity / (float)categoryCumulativePrediction) * 100;
             }
             return contributionList;
         }
@@ -1445,16 +1459,158 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         #region Individual Product Sales Prediction
 
-        #region Train 
+        #region Data Preparation
+        private List<TempProductWeeklyTrainData> HandleMissingValueForIndividualProductWeeklyTrainData(List<TempProductWeeklyTrainData> productWeeklyTrainDatas)
+        {
+            // sort 
+            productWeeklyTrainDatas = productWeeklyTrainDatas
+                .OrderBy(data => data.Year)
+                .ThenBy(data => data.Month)
+                .ThenBy(data => data.Week)
+                .ToList();
+
+            var resolvedData = new List<TempProductWeeklyTrainData>();
+            var trainDataCache = new Dictionary<Tuple<int, int>, float>();
+            foreach(var data in productWeeklyTrainDatas)
+            {
+                trainDataCache[new Tuple<int, int>((int)data.Month, (int)data.Week)] = data.CurrentWeekQuantity;
+            }
+
+            if(productWeeklyTrainDatas.Count <= 0)
+                return new List<TempProductWeeklyTrainData>();
+
+            resolvedData.Add(productWeeklyTrainDatas[0]);
+            for (int i = 1; i < productWeeklyTrainDatas.Count; i++)
+            {
+                if (resolvedData[resolvedData.Count - 1].Month != productWeeklyTrainDatas[i].Month)
+                {
+                    resolvedData.Add(productWeeklyTrainDatas[i]);
+                } else if (resolvedData[resolvedData.Count - 1].Month == productWeeklyTrainDatas[i].Month && (productWeeklyTrainDatas[i].Week - resolvedData[resolvedData.Count - 1].Week) == 1)
+                {
+                    resolvedData.Add(productWeeklyTrainDatas[i]);
+                } else
+                {
+                    int missingWeeks = (int)productWeeklyTrainDatas[i].Week - (int)resolvedData[resolvedData.Count - 1].Week;
+                    for(int j = 1;j < missingWeeks; j++)
+                    {
+                        int missingWeek =  (int)resolvedData[resolvedData.Count - 1].Week + j;
+                        if(trainDataCache.ContainsKey(new Tuple<int, int>((int)productWeeklyTrainDatas[i].Month, (int)productWeeklyTrainDatas[i].Week)))
+                        {
+                            resolvedData.Add(new TempProductWeeklyTrainData()
+                            {
+                                Year = productWeeklyTrainDatas[i].Year,
+                                Month = productWeeklyTrainDatas[i].Month,
+                                Week = missingWeek,
+                                CurrentWeekQuantity = trainDataCache[new Tuple<int, int>((int)productWeeklyTrainDatas[i].Month, (int)productWeeklyTrainDatas[i].Week)],
+                            });
+                        }
+                    }
+                    resolvedData.Add(productWeeklyTrainDatas[i] );
+                }
+            }
+            return resolvedData;
+        }
+        private async Task<List<ProductWeeklyTrainData>> PrepareIndividualProductWeeklyTrainingData(Product product, bool DiscountAppliedFrequently)
+        {
+            var query = from oi in _orderItemRepository.Table
+                        join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        where oi.ProductId == product.Id
+                        group oi by new
+                        {
+                            Year = o.CreatedOnUtc.Year,
+                            Month = o.CreatedOnUtc.Month,
+                            Day = o.CreatedOnUtc.Day,
+                        } into goi
+                        select new ProductDailyGroupedTrainData()
+                        {
+                            Year = goi.Key.Year, 
+                            Month = goi.Key.Month,
+                            Day = goi.Key.Day,
+                            CurrentWeekQuantity = goi.Sum(x => x.Quantity),
+                        };
+
+            var trainData = await query.ToListAsync();
+
+            var weekNoToWeeklyTrainDataMap = new Dictionary<Tuple<int,int,int>, TempProductWeeklyTrainData>();
+
+            foreach (var row in trainData)
+            {
+                DateTime date = new DateTime((int)row.Year, (int)row.Month, (int)row.Day);
+                int weekNoOfMonth = (date.Day - 1) / 7 + 1;
+
+                if (weekNoToWeeklyTrainDataMap.ContainsKey(new Tuple<int,int,int>((int)row.Year, (int)row.Month, weekNoOfMonth)))
+                {
+                    weekNoToWeeklyTrainDataMap[new Tuple<int, int, int>((int)row.Year, (int)row.Month, weekNoOfMonth)].CurrentWeekQuantity += row.CurrentWeekQuantity;
+                } else
+                {
+                    weekNoToWeeklyTrainDataMap[new Tuple<int, int, int>((int)row.Year, (int)row.Month, weekNoOfMonth)] = new TempProductWeeklyTrainData()
+                    {
+                        Year = row.Year,
+                        Month = row.Month,
+                        Week = weekNoOfMonth,
+                        CurrentWeekQuantity = row.CurrentWeekQuantity,
+                    };
+                }
+            }
+
+            var weeklyGroupedTrainData = weekNoToWeeklyTrainDataMap.Values.ToList();
+
+            var missingValuesHandledWeeklyTrainData = HandleMissingValueForIndividualProductWeeklyTrainData(weeklyGroupedTrainData);
+
+            var completeTrainingData = missingValuesHandledWeeklyTrainData.Select((x, index) => new ProductWeeklyTrainData
+            {
+                Month = x.Month,
+                Week = x.Week,
+                CurrentWeekQuantity = x.CurrentWeekQuantity,
+                Next = index == missingValuesHandledWeeklyTrainData.Count - 1 ? 0 : missingValuesHandledWeeklyTrainData[index + 1].CurrentWeekQuantity,
+            }).ToList();
+
+            return completeTrainingData;
+        }
+
+        #endregion
 
 
+        #region Train and Save
+
+        public async Task<(bool, string)> TrainIndividualProductWeeklySalesPredictionModelAsync(Product product, bool DiscountAppliedFrequently, bool logInfo = false)
+        {
+            var sucess = false;
+
+            var productSalesHistory = await PrepareIndividualProductWeeklyTrainingData(product, DiscountAppliedFrequently);
+
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathIndividualProductForcasting);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, product.Id.ToString()+".zip");
+
+            // save the training data to a csv file 
+            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+
+            // train and save to the database
+            ForecastingModelHelper.TrainAndSaveIndividualProductModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            
+            sucess = true;
+
+            return (sucess, string.Empty);
+        }
 
         #endregion
 
 
         #region Forcast 
 
+        public async Task<float> PredictSaleForEachIndividualProduct(Product product, bool DiscountAppliedFrequently)
+        {
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathIndividualProductForcasting);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, product.Id.ToString() + ".zip");
 
+            // get this week data 
+            var sampleData = await PrepareIndividualProductWeeklyTrainingData(product, DiscountAppliedFrequently);
+            var sampleDatum = sampleData[sampleData.Count - 1];
+
+            var score = ForecastingModelHelper.PredictIndividualProductModel(_mlContext, outputPathToSaveModel, sampleDatum);
+
+            return score;
+        }
 
         #endregion
 

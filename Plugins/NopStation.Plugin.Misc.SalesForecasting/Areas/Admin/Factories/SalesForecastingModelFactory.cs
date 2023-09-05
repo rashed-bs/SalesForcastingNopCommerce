@@ -30,6 +30,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
         private readonly IRepository<GroupRelatedProduct> _groupRelatedProductRepository;
         private readonly IRepository<ProductGroup> _productGroupRepository;
         protected readonly IRepository<Product> _productRepository;
+        private readonly IRepository<GroupProductsPrediction> _groupProductsPrediction;
+
         public SalesForecastingModelFactory(ILocalizationService localizationService,
             ICategoryService categoryService,
             ISalesForecastingService mLModelService,
@@ -37,6 +39,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
             IRepository<GroupRelatedProduct> groupRelatedProductRepository,
             IRepository<Product> productRepository,
             IPictureService pictureService,
+            IRepository<GroupProductsPrediction> groupProductsPrediction,
             IRepository<ProductGroup> productGroupRepository)
         {
             _categoryService = categoryService;
@@ -45,6 +48,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
             _productService = productService;
             _pictureService = pictureService;
             _productRepository = productRepository;
+            _groupProductsPrediction = groupProductsPrediction;
             _groupRelatedProductRepository = groupRelatedProductRepository;
             _productGroupRepository = productGroupRepository;
         }
@@ -161,6 +165,30 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
                         IsActive = productGroup.IsActive,
                     };
                     return productGroupModel;
+                });
+            });
+            return model;
+        }
+
+        public async Task<GroupProductPredictionListModel> PrepareIndividualProductPredictionListModelAsync(GroupProductPredictionSearchModel searchModel)
+        {
+            var query = from pp in _groupProductsPrediction.Table
+                        where pp.ProductGroupId == searchModel.ProductGroupId
+                        select pp;
+            var productGroupPredictionList = (await query.ToListAsync()).ToPagedList(searchModel);
+            // prepare grid model 
+            var model = await new GroupProductPredictionListModel().PrepareToGridAsync(searchModel, productGroupPredictionList, () =>
+            {
+                return productGroupPredictionList.SelectAwait(async predictionModel =>
+                {
+                    var groupProductPredictionModel = new GroupProductPredictionModel()
+                    {
+                        Id = predictionModel.Id,
+                        WeeklyUnitPrediction = predictionModel.WeeklyUnitPrediction,
+                        WeeklyMonetaryPrediction = predictionModel.WeeklyMonetaryPrediction,
+                        ProductName = (await _productService.GetProductByIdAsync(predictionModel.ProductId)).Name,
+                    };
+                    return groupProductPredictionModel;
                 });
             });
             return model;

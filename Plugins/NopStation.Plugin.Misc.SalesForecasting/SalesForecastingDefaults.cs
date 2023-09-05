@@ -15,6 +15,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting
         public static string SystemName => "NopStation.Plugin.Misc.SalesForecasting";
 
         public static string MLModelPathTimeSeries => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesTimeSeries";
+        public static string MLModelPathIndividualProductForcasting => "Plugins/NopStation.Plugin.Misc.SalesForecasting/IndividualProductForcasting";
 
         public static string MLModelMonthlyPredictionPathTimeSeries => "Plugins/NopStation.Plugin.Misc.SalesForecasting/MLModelFilesTimeSeries/MonthlyModels";
 

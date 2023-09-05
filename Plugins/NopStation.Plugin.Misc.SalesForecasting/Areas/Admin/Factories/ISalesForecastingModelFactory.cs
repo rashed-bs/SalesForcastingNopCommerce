@@ -18,5 +18,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
         Task<ProductGroupListModel> PrepareProductGroupListModelAsync(GroupProductSearchModel groupProductSearchModel);
 
         GroupProductSearchModel PrepareProductGroupSearchModelAsync(GroupProductSearchModel groupProductSearchModel);
+
+        Task<GroupProductPredictionListModel>PrepareIndividualProductPredictionListModelAsync(GroupProductPredictionSearchModel searchModel);
     }
 }
