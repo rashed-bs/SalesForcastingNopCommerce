@@ -1,0 +1,32 @@
+@model ProductGroupModel
+
+@{
+    var showTour = ViewBag.ShowTour ?? false;
+
+    const string hideInfoBlockAttributeName = "ProductForcast.HideInfoBlock";
+    var customer = await workContext.GetCurrentCustomerAsync();
+    var hideInfoBlock = showTour ? false : await genericAttributeService.GetAttributeAsync<bool>(customer, hideInfoBlockAttributeName);
+
+
+    const string hideRelatedProductsBlockAttributeName = "ProductForcast.HideRelatedProductsBlock";
+    var hideRelatedProductsBlock = await genericAttributeService.GetAttributeAsync<bool>(customer, hideRelatedProductsBlockAttributeName, defaultValue: true);
+
+
+}
+
+<div asp-validation-summary="All"></div>
+<input asp-for="Id" type="hidden" />
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="form-horizontal">
+
+            <nop-cards id="product-cards">
+                <nop-card asp-name="product-info" asp-icon="fas fa-info" asp-title="@T("Admin.Catalog.Products.Info")" asp-hide-block-attribute-name="@hideInfoBlockAttributeName" asp-hide="@hideInfoBlock" asp-advanced="false">@await Html.PartialAsync("_CreateOrUpdate.Info", Model)</nop-card>
+
+                <nop-card asp-name="product-related-products" asp-icon="fas fa-object-group" asp-title="@T("Admin.Catalog.Products.RelatedProducts")" asp-hide-block-attribute-name="@hideRelatedProductsBlockAttributeName" asp-hide="@hideRelatedProductsBlock">@await Html.PartialAsync("_CreateOrUpdate.RelatedProducts", Model)</nop-card>
+
+            </nop-cards>
+        </div>
+    </div>
+</section>

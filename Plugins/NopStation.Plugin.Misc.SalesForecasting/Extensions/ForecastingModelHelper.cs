@@ -302,5 +302,27 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
 
         #region Ensemble Model
         #endregion
+
+        #region Individual Product Forcasting
+        public static void TrainAndSaveIndividualProductModel(MLContext mlContext, List<ProductWeeklyTrainData> productSalesHistory, string outputModelPath)
+        {
+            var pipeline = mlContext.Transforms.ReplaceMissingValues(new[] { new InputOutputColumnPair(@"Month", @"Month"), new InputOutputColumnPair(@"Week", @"Week"), new InputOutputColumnPair(@"CurrentWeekQuantity", @"CurrentWeekQuantity") })
+                                    .Append(mlContext.Transforms.Concatenate(@"Features", new[] { @"Month", @"Week", @"CurrentWeekQuantity" }))
+                                    .Append(mlContext.Regression.Trainers.FastForest(new FastForestRegressionTrainer.Options() { NumberOfTrees = 1130, NumberOfLeaves = 4, FeatureFraction = 0.9370067F, LabelColumnName = @"Next", FeatureColumnName = @"Features" }));
+            var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
+            var model = pipeline.Fit(trainingDataView);
+
+            // Save the model for later comsumption from end-user apps.
+            mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+
+        }
+        public static float PredictIndividualProductModel(MLContext mlContext, string outputModelPath, ProductWeeklyTrainData sampleData)
+        {
+            ITransformer mlModel = mlContext.Model.Load(outputModelPath, out var _);
+            var predictEngine = mlContext.Model.CreatePredictionEngine<ProductWeeklyTrainData, IndividualModelOutput>(mlModel);
+            var prediction = predictEngine.Predict(sampleData);
+            return prediction.Score;
+        }
+        #endregion
     }
 }

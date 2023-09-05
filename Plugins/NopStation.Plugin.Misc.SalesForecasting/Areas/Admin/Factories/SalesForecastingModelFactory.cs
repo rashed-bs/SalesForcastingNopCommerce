@@ -14,6 +14,9 @@ using Nop.Web.Areas.Admin.Models.Catalog;
 using Nop.Core.Domain.Catalog;
 using Nop.Web.Areas.Admin.Infrastructure.Mapper.Extensions;
 using Nop.Services.Media;
+using NopStation.Plugin.Misc.SalesForecasting.Domain;
+using Nop.Web.Framework.Models.Extensions;
+using System;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
 {
@@ -24,17 +27,30 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
         private readonly ISalesForecastingService _mLModelService;
         private readonly IProductService _productService;
         private readonly IPictureService _pictureService;
+        private readonly IRepository<GroupRelatedProduct> _groupRelatedProductRepository;
+        private readonly IRepository<ProductGroup> _productGroupRepository;
+        protected readonly IRepository<Product> _productRepository;
+        private readonly IRepository<GroupProductsPrediction> _groupProductsPrediction;
+
         public SalesForecastingModelFactory(ILocalizationService localizationService,
             ICategoryService categoryService,
             ISalesForecastingService mLModelService,
             IProductService productService,
-            IPictureService pictureService)
+            IRepository<GroupRelatedProduct> groupRelatedProductRepository,
+            IRepository<Product> productRepository,
+            IPictureService pictureService,
+            IRepository<GroupProductsPrediction> groupProductsPrediction,
+            IRepository<ProductGroup> productGroupRepository)
         {
             _categoryService = categoryService;
             _localizationService = localizationService;
             _mLModelService = mLModelService;
             _productService = productService;
             _pictureService = pictureService;
+            _productRepository = productRepository;
+            _groupProductsPrediction = groupProductsPrediction;
+            _groupRelatedProductRepository = groupRelatedProductRepository;
+            _productGroupRepository = productGroupRepository;
         }
 
         public async Task<PredictionSearchModel> PreparePredictionSearchModel(PredictionSearchModel predictionSearchModel, string defaultValue = "0")
@@ -53,6 +69,28 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
             return predictionSearchModel;
         }
 
+        public virtual async Task<ProductGroupModel> PrepareProductGroupModelAsync(ProductGroupModel productGroupModel, ProductGroup productGroup)
+        {
+            if (productGroupModel == null && productGroup == null)
+            {
+                return new ProductGroupModel();
+            }
+            if (productGroupModel == null)
+            {
+                var model = new ProductGroupModel();
+                model.Id = productGroup.Id;
+                model.IsActive = productGroup.IsActive;
+                model.GroupName = productGroup.GroupName;
+                model.DiscountAppliedFrequently = productGroup.DiscountAppliedFrequently;
+                model.RelatedProductGroupSearchModel = new RelatedProductGroupSearchModel();
+                model.RelatedProductGroupSearchModel.ProductGroupId = productGroup.Id;
+                model.GroupProductPredictionSearchModel = new GroupProductPredictionSearchModel();
+                model.GroupProductPredictionSearchModel.ProductGroupId = productGroup.Id;
+                return model;
+            }
+            return new ProductGroupModel();
+        }
+
         public async Task<IEnumerable<ProductModel>> PrepareProductModelsAsync(IEnumerable<Product> products)
         {
             return await products.SelectAwait(async product =>
@@ -66,6 +104,94 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
                 (productModel.PictureThumbnailUrl, _) = await _pictureService.GetPictureUrlAsync(defaultProductPicture, 75);
                 return productModel;
             }).ToListAsync();
+        }
+
+
+        public virtual async Task<RelatedProductGroupListModel> PrepareRelatedProductListModelAsync(RelatedProductGroupSearchModel searchModel, ProductGroup productGroup)
+        {
+            if (searchModel == null)
+                throw new ArgumentNullException(nameof(searchModel));
+
+            if (productGroup == null)
+                throw new ArgumentNullException(nameof(productGroup));
+
+            var query = from rp in _groupRelatedProductRepository.Table
+                        where rp.ProductId1 == productGroup.Id
+                        select rp;
+            var relatedProducts = (await query.ToListAsync()).ToPagedList(searchModel);
+
+            //prepare grid model
+            var model = await new RelatedProductGroupListModel().PrepareToGridAsync(searchModel, relatedProducts, () =>
+            {
+                return relatedProducts.SelectAwait(async relatedProduct =>
+                {
+                    var relatedProductGroupModel = new RelatedProductGroupModel()
+                    {
+                        Id = relatedProduct.Id,
+                        ProductId2 = relatedProduct.ProductId2,
+                        DisplayOrder = relatedProduct.DisplayOrder,
+                    };
+
+                    //fill in additional values (not existing in the entity)
+                    relatedProductGroupModel.Product2Name = (await _productService.GetProductByIdAsync(relatedProduct.ProductId2))?.Name;
+
+                    return relatedProductGroupModel;
+                });
+            });
+            return model;
+        }
+
+        public GroupProductSearchModel PrepareProductGroupSearchModelAsync(GroupProductSearchModel groupProductSearchModel)
+        {
+            return new GroupProductSearchModel();
+        }
+        
+        public async Task<ProductGroupListModel> PrepareProductGroupListModelAsync(GroupProductSearchModel groupProductSearchModel)
+        {
+            var query = from p in _productGroupRepository.Table
+                        where (groupProductSearchModel.GroupName == null || (p.GroupName.ToLower().StartsWith(groupProductSearchModel.GroupName.ToLower())))
+                        select p;
+            var productGroupList = (await query.ToListAsync()).ToPagedList(groupProductSearchModel);
+            // prepare grid model 
+            var model = await new ProductGroupListModel().PrepareToGridAsync(groupProductSearchModel, productGroupList, () =>
+            {
+                return productGroupList.SelectAwait(async productGroup =>
+                {
+                    var productGroupModel = new ProductGroupModel()
+                    {
+                        Id = productGroup.Id,
+                        GroupName = productGroup.GroupName,
+                        DiscountAppliedFrequently = productGroup.DiscountAppliedFrequently,
+                        IsActive = productGroup.IsActive,
+                    };
+                    return productGroupModel;
+                });
+            });
+            return model;
+        }
+
+        public async Task<GroupProductPredictionListModel> PrepareIndividualProductPredictionListModelAsync(GroupProductPredictionSearchModel searchModel)
+        {
+            var query = from pp in _groupProductsPrediction.Table
+                        where pp.ProductGroupId == searchModel.ProductGroupId
+                        select pp;
+            var productGroupPredictionList = (await query.ToListAsync()).ToPagedList(searchModel);
+            // prepare grid model 
+            var model = await new GroupProductPredictionListModel().PrepareToGridAsync(searchModel, productGroupPredictionList, () =>
+            {
+                return productGroupPredictionList.SelectAwait(async predictionModel =>
+                {
+                    var groupProductPredictionModel = new GroupProductPredictionModel()
+                    {
+                        Id = predictionModel.Id,
+                        WeeklyUnitPrediction = predictionModel.WeeklyUnitPrediction,
+                        WeeklyMonetaryPrediction = predictionModel.WeeklyMonetaryPrediction,
+                        ProductName = (await _productService.GetProductByIdAsync(predictionModel.ProductId)).Name,
+                    };
+                    return groupProductPredictionModel;
+                });
+            });
+            return model;
         }
     }
 }
