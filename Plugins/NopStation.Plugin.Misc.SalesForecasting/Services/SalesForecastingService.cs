@@ -1570,7 +1570,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         #endregion
 
-
         #region Train and Save
 
         public async Task<(bool, string)> TrainIndividualProductWeeklySalesPredictionModelAsync(Product product, bool DiscountAppliedFrequently, bool logInfo = false)

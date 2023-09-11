@@ -4,6 +4,7 @@
 @inject Nop.Services.Common.IGenericAttributeService genericAttributeService
 @inject IWorkContext workContext
 @{
+    NopHtml.SetActiveMenuItemSystemName("SalesForecasting.SalesPrediction");
     NopHtml.AppendScriptParts(ResourceLocation.Footer, "~/lib_npm/chart.js/Chart.min.js");
     const string prefix = "inventoryprediction-statistics";
     const string hideCardAttributeName = "Reports.HideCustomerStatisticsCard";
@@ -83,7 +84,7 @@
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
-                            @T("Weekly Sales Prediction")
+                            @T("Admin.SalesForecasting.SalesPrediction.Weekly.Chart.Title")
                         </h3>
                         <div class="card-tools float-right">
                             <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
@@ -99,7 +100,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="chart" style="height: 300px;">
+                        <div class="chart" style="height: auto;">
                             <canvas id="@(prefix)-chart" height="300"></canvas>
                         </div>
                     </div>
@@ -112,7 +113,7 @@
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
-                            @T("Monthly Top Categories Combined Sales Prediction")
+                            @T("Admin.SalesForecasting.SalesPrediction.Monthly.Chart.Title")
                         </h3>
                         <div class="card-tools float-right">
                             <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
@@ -128,7 +129,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="chart" style="height: 300px;">
+                        <div class="chart" style="height: auto;">
                             <canvas id="@(prefix)-chart-monthly-combined" height="300"></canvas>
                         </div>
                     </div>
@@ -141,7 +142,7 @@
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
-                            @T("Sales Contribution of categories")
+                            @T("Admin.SalesForecasting.SalesPrediction.Chart.Contribution.Title")
                         </h3>
                         <div class="card-tools float-right">
                             <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
@@ -156,8 +157,8 @@
                             </button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div class="chart" style="height: 300px;">
+                    <div class="card-body" style="height:auto">
+                        <div class="chart">
                             <canvas id="@(prefix)-chart-monthly-category-contribution-pie" height="90"></canvas>
                         </div>
                     </div>
@@ -170,7 +171,7 @@
                     <div class="card-header with-border">
                         <h3 class="card-title">
                             <i class="far fa-user"></i>
-                            @T("Category Sales Vs Stock")
+                            @T("Admin.SalesForecasting.SalesPrediction.Chart.SalesVsStock.Title")
                         </h3>
                         <div class="card-tools float-right">
                             <button class="btn btn-tool margin-l-10" data-card-widget="collapse">
@@ -185,8 +186,8 @@
                             </button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div class="chart" style="height: 300px;">
+                    <div class="card-body" style="height:auto">
+                        <div class="chart">
                             <canvas id="@(prefix)-chart-category-vs-stock-bar-chart" height="80"></canvas>
                         </div>
                     </div>
@@ -346,7 +347,7 @@
                                 labels: [],
                                 datasets: [
                                     {
-                                        label: "@T("Plugins.NopStation.InventoryPrediction.Report.WeeklySalesQuantity")",
+                                        label: "@T("Plugins.NopStation.InventoryPrediction.Report.MonthlySalesQuantity")",
                                         fillColor: "rgba(60,141,188,0.9)",
                                         strokeColor: "rgba(60,141,188,0.8)",
                                         pointColor: "#00a65a",

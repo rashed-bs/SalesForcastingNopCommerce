@@ -1,8 +1,8 @@
 ﻿@model ConfigurationModel
 
 @{
-    ViewBag.PageTitle = T("Admin.NopStation.SalesForecasting.Title").Text;
-    NopHtml.SetActiveMenuItemSystemName("PowerBI.Configuration");
+    ViewBag.PageTitle = T("Admin.SalesForecasting.Configure.PageTitle").Text;
+    NopHtml.SetActiveMenuItemSystemName("SalesForecasting.Configuration");
 
     const string hideInfoBlockAttributeName = "SalesForcastingPage.HideInfoBlock";
     var customer = await workContext.GetCurrentCustomerAsync();
@@ -12,7 +12,7 @@
 <form asp-controller="SalesForecasting" asp-action="Configure" method="post">
     <div class="content-header clearfix">
         <h1 class="float-left">
-            @T("Configure")
+            @T("Admin.SalesForecasting.Configure.PageHead")
         </h1>
 
         <div class="float-right">
@@ -21,13 +21,21 @@
                 @T("Admin.Common.Save")
             </button>
         </div>
+
+        <div class="float-right">
+            <button type="button" name="Train" class="btn btn-primary" id="train-button-id">
+                <i class="far fa-save"></i>
+                @T("Admin.SalesForecasting.Configure.TrainModel")
+            </button>
+        </div>
+
     </div>
     <div asp-validation-summary="All"></div>
     <section class="content">
         <div class="container-fluid">
             <div class="form-horizontal">
                 <nop-cards id="salesForcasting-cards">
-                    <nop-card asp-name="store-regional-info" asp-icon="fas fa-info" asp-title="@T("Store regional info")" asp-hide-block-attribute-name="@hideInfoBlockAttributeName" asp-hide="@hideInfoBlock" asp-advanced="false">
+                    <nop-card asp-name="store-regional-info" asp-icon="fas fa-info" asp-title="@T("Admin.SalesForecasting.Configure.StoreConfigure")" asp-hide-block-attribute-name="@hideInfoBlockAttributeName" asp-hide="@hideInfoBlock" asp-advanced="false">
 
                         <div class="card-body">
                             @await Component.InvokeAsync("StoreScopeConfiguration")
@@ -49,8 +57,6 @@
                                     <span asp-validation-for="SundayIsWeekend"></span>
                                 </div>
                             </div>
-
-
 
                             <div class="form-group row advanced-setting">
                                 <div class="col-md-3">
@@ -107,14 +113,14 @@
 </form>
 
 
-<form asp-controller="SalesForecasting" asp-action="TrainModel" method="post">
+<form asp-controller="SalesForecasting" asp-action="TrainModel" method="post" id="train-form-id">
     <section class="content">
         <div class="container-fluid">
             <div class="form-horizontal">
                 <nop-cards id="salesForcasting-cards">
                     <div class="form-group">
                         <div class="col-md-9 col-md-offset-3">
-                            <input type="submit" name="save" class="btn bg-primary" value="@T("Admin.NopStation.SalesForecasting.Configure.TrainModel")" />
+                            <input hidden type="submit" name="save" class="btn bg-primary" value="@T("Admin.SalesForecasting.Configure.TrainModel")" />
                         </div>
                     </div>
                 </nop-cards>
@@ -122,3 +128,13 @@
         </div>
     </section>
 </form>
+
+
+<script asp-location="Footer">
+    $(document).ready(function () {
+        $("#train-button-id").click(function (event) {
+            event.preventDefault();
+            $("#train-form-id").submit();
+        });
+    });
+</script>

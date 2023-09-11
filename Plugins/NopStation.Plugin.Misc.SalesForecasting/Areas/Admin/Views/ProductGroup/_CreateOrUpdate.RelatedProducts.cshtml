@@ -2,7 +2,7 @@
 @model ProductGroupModel
 <div class="card-body">
     <p>
-        @T("Admin.Catalog.Products.RelatedProducts.Hint")
+        @T("Admin.SalesForecasting.Create.RelatedProducts.Hint")
     </p>
     @if (Model.Id > 0)
     {
@@ -57,7 +57,7 @@
             </div>
             <div class="card-footer">
                 <button type="submit" id="btnAddNewRelatedProduct" class="btn btn-primary" onclick="javascript:OpenWindow('@(Url.Action("RelatedProductAddPopup", "ProductGroup", new {productGroupId = Model.Id, btnId = "btnRefreshRelatedProducts", formId = "product-forcast-form"}))', 800, 800, true); return false;">
-                    @T("Admin.Catalog.Products.RelatedProducts.AddNew")
+                    @T("Admin.SalesForecasting.Create.RelatedProducts.AddNew")
                 </button>
                 <button type="submit" id="btnRefreshRelatedProducts" style="display: none"></button>
                 <input id="train-and-forcast-group-id" value="@Model.RelatedProductGroupSearchModel.ProductGroupId" hidden>
@@ -121,7 +121,7 @@
     {
         <div class="card card-default">
             <div class="card-body">
-                @T("Admin.Catalog.Products.RelatedProducts.SaveBeforeEdit")
+                @T("Admin.SalesForecasting.Create.RelatedProducts.SaveBeforeEdit")
             </div>
         </div>
     }

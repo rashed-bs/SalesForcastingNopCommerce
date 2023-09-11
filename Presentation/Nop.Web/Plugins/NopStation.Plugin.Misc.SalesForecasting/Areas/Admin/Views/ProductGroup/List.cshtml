@@ -1,9 +1,9 @@
 @model GroupProductSearchModel
 @{
     //page title
-    ViewBag.PageTitle = T("Add a product group").Text;
+    ViewBag.PageTitle = T("Admin.SalesForecasting.List.pageTitle").Text;
     //active menu item (system name)
-    NopHtml.SetActiveMenuItemSystemName("");
+    NopHtml.SetActiveMenuItemSystemName("SalesForecasting.ProductPrediction");
 }
 
 @{
@@ -15,7 +15,7 @@
 
     <div class="content-header clearfix">
         <h1 class="float-left">
-            @T("Product groups")
+            @T("Admin.SalesForecasting.List")
         </h1>
         <div class="float-right">
             <a asp-action="Create" class="btn btn-primary">
@@ -108,16 +108,16 @@
                             },
                             new ColumnProperty(nameof(ProductGroupModel.GroupName))
                             {
-                            Title = T("Group Name").Text
+                            Title = T("Admin.SalesForecasting.List.ProductGroup.Table.GroupName").Text
                             },
                             new ColumnProperty(nameof(ProductGroupModel.IsActive))
                             {
-                            Title = T("IsActive").Text,
+                            Title = T("Admin.SalesForecasting.List.ProductGroup.Table.IsActive").Text,
                             Width = "100"
                             },
                             new ColumnProperty(nameof(ProductGroupModel.DiscountAppliedFrequently))
                             {
-                            Title = T("DisCountAppliedFrequently").Text,
+                            Title = T("Admin.SalesForecasting.List.ProductGroup.Table.DiscountAppliedFrequently").Text,
                             Width = "100"
                             },
                             new ColumnProperty(nameof(ProductGroupModel.Id))

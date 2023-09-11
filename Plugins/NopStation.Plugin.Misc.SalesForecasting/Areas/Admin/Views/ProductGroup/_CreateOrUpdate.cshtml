@@ -22,9 +22,9 @@
         <div class="form-horizontal">
 
             <nop-cards id="product-cards">
-                <nop-card asp-name="product-info" asp-icon="fas fa-info" asp-title="@T("Admin.Catalog.Products.Info")" asp-hide-block-attribute-name="@hideInfoBlockAttributeName" asp-hide="@hideInfoBlock" asp-advanced="false">@await Html.PartialAsync("_CreateOrUpdate.Info", Model)</nop-card>
+                <nop-card asp-name="product-info" asp-icon="fas fa-info" asp-title="@T("Admin.SalesForecasting.Create.Info")" asp-hide-block-attribute-name="@hideInfoBlockAttributeName" asp-hide="@hideInfoBlock" asp-advanced="false">@await Html.PartialAsync("_CreateOrUpdate.Info", Model)</nop-card>
 
-                <nop-card asp-name="product-related-products" asp-icon="fas fa-object-group" asp-title="@T("Admin.Catalog.Products.RelatedProducts")" asp-hide-block-attribute-name="@hideRelatedProductsBlockAttributeName" asp-hide="@hideRelatedProductsBlock">@await Html.PartialAsync("_CreateOrUpdate.RelatedProducts", Model)</nop-card>
+                <nop-card asp-name="product-related-products" asp-icon="fas fa-object-group" asp-title="@T("Admin.SalesForecasting.Create.RelatedProducts")" asp-hide-block-attribute-name="@hideRelatedProductsBlockAttributeName" asp-hide="@hideRelatedProductsBlock">@await Html.PartialAsync("_CreateOrUpdate.RelatedProducts", Model)</nop-card>
 
             </nop-cards>
         </div>

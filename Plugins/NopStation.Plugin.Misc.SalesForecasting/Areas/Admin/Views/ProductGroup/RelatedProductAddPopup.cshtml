@@ -5,7 +5,7 @@
     Layout = "_AdminPopupLayout";
 
     //page title
-    ViewBag.PageTitle = T("Admin.Catalog.Products.RelatedProducts.AddNew").Text;
+    ViewBag.PageTitle = T("Admin.SalesForecasting.Create.AddPopUp.PageTitle").Text;
 }
 
 @if (ViewBag.RefreshPage == true)
@@ -24,7 +24,7 @@ else
           asp-route-formId="@Context.Request.Query["formId"]">
         <div class="content-header clearfix">
             <h1 class="float-left">
-                @T("Admin.Catalog.Products.RelatedProducts.AddNew")
+                @T("Admin.SalesForecasting.Create.AddPopUp.AddNew")
             </h1>
             <div class="pull-right">
                 &nbsp;

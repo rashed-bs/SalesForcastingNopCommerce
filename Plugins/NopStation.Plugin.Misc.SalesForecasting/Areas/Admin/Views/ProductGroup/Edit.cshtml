@@ -2,18 +2,18 @@
 
 @{
     //page title
-    ViewBag.PageTitle = T("Admin.Catalog.Products.AddNew").Text;
+    ViewBag.PageTitle = T("Admin.SalesForecasting.Edit.pageTitle").Text;
     //active menu item (system name)
-    NopHtml.SetActiveMenuItemSystemName("Products");
+    NopHtml.SetActiveMenuItemSystemName("SalesForecasting.ProductPrediction");
 }
 
 <form asp-controller="ProductGroup" asp-action="Edit" method="post" id="product-forcast-form">
     <div class="content-header clearfix">
         <h1 class="float-left">
-            @T("Edit")
+            @T("Admin.SalesForecasting.Edit.pageHead")
             <small>
                 <i class="fas fa-arrow-circle-left"></i>
-                <a asp-action="List">@T("Admin.Catalog.Products.BackToList")</a>
+                <a asp-action="List">@T("Admin.SalesForecasting.Edit.BackToList")</a>
             </small>
         </h1>
         <div class="float-right">
