@@ -128,6 +128,11 @@ namespace NopStation.Plugin.Misc.SalesForecasting
                 ["Admin.SalesForecasting.SalesPrediction.Monthly.Chart.Title"] = "Monthly top categories sales prediction",
                 ["Admin.SalesForecasting.SalesPrediction.Chart.Contribution.Title"] = "Sales contribution of categories (monthly)",
                 ["Admin.SalesForecasting.SalesPrediction.Chart.SalesVsStock.Title"] = "Category sales vs stock (monthly)",
+                ["Admin.SalesForecasting.SalesPrediction.Table.ProductName"] = "Name",
+                ["Admin.SalesForecasting.SalesPrediction.Table.WeeklyUnitPrediction"] = "Weekly Prediction (Unit)",
+                ["Admin.SalesForecasting.SalesPrediction.Table.WeeklyMonetaryPrediction"] = "Weekly Prediction (Money)",
+                ["Admin.SalesForecasting.SalesPrediction.Table.MonthlyUnitPrediction"] = "Monthly Prediction (Unit)",
+                ["Admin.SalesForecasting.SalesPrediction.Table.MonthlyMonetaryPrediction"] = "Monthly Prediction (Money)",
                 ["Plugins.NopStation.InventoryPrediction.Report.WeeklySalesQuantity"] = "Weekly Sales Quantity",
                 ["Plugins.NopStation.InventoryPrediction.Report.MonthlySalesQuantity"] = "Monthly Sales Quantity",
             });

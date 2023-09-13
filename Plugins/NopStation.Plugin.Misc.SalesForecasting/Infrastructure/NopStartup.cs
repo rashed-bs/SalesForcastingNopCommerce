@@ -6,6 +6,7 @@ using NopStation.Plugin.Misc.Core.Infrastructure;
 using NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories;
 using NopStation.Plugin.Misc.SalesForecasting.Services;
 
+
 namespace NopStation.Plugin.Misc.SalesForecasting.Infrastructure
 {
     /// <summary>
@@ -35,6 +36,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Infrastructure
         /// <param name="application">Builder for configuring an application's request pipeline</param>
         public void Configure(IApplicationBuilder application)
         {
+            
         }
 
         /// <summary>

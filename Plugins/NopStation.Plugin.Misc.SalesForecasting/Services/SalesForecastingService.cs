@@ -31,6 +31,7 @@ using NUglify.Helpers;
 using System.Runtime.Intrinsics.X86;
 using DocumentFormat.OpenXml.Bibliography;
 using System.Globalization;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace NopStation.Plugin.Misc.SalesForecasting.Services
 {
@@ -1455,6 +1456,47 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             }
             return contributionList;
         }
+
+        public async Task<Dictionary<int, int>> GetStocksOfBestCategories()
+        {
+            var stockQuantity = new Dictionary<int,int>();
+            // get top categories 
+            var topCategories = await _staticCacheManager.GetAsync(SalesForecastingDefaults.TopSellingCategoriesCacheKey, TopSellingCategories);
+            var bestCategories = topCategories.Select(x => x.CategoryId).ToList();
+            var categorySubToRoot = await _staticCacheManager.GetAsync(SalesForecastingDefaults.CategorySubToRootMappingCacheKey, CreateCategoryMappingSubToRoot);
+
+            var query = from pc in _productCategoryRepository.Table
+                        select pc;
+
+            var productIDtoCategoryIds = await query.ToListAsync();
+            productIDtoCategoryIds.ForEach(x => x.CategoryId = categorySubToRoot[x.CategoryId]);
+
+            var finalProductIds = productIDtoCategoryIds.Where(x => bestCategories.Contains(x.CategoryId))
+                .ToList();
+            
+            foreach(var p_id in finalProductIds)
+            {
+                var stock = await (from p in _productRepository.Table
+                                   where p.Id == p_id.ProductId
+                                   select p.StockQuantity).ToListAsync();
+                if(stock.Count > 0)
+                {
+                    if(stockQuantity.ContainsKey(p_id.CategoryId))
+                    {
+                        stockQuantity[p_id.CategoryId] += stock[0];
+                    } else
+                    {
+                        stockQuantity[p_id.CategoryId] = stock[0];
+                    }
+                } else
+                {
+                    continue;
+                }
+            }
+
+            return stockQuantity;
+        }
+
         #endregion
 
         #region Individual Product Sales Prediction
@@ -1506,6 +1548,102 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
                         }
                     }
                     resolvedData.Add(productWeeklyTrainDatas[i] );
+                }
+            }
+            return resolvedData;
+        }
+
+        private List<ProductMonthlyTrainData> HandleMissingValueForIndividualProductMonthlyTrainData(List<ProductMonthlyTrainData> productMonthlyTrainDatas)
+        {
+            var resolvedData = new List<ProductMonthlyTrainData>();
+            var trainDataCache = new Dictionary<int, ProductMonthlyTrainData>();
+            foreach (var data in productMonthlyTrainDatas)
+            {
+                trainDataCache[(int)data.Month] = data;
+            }
+
+            if (productMonthlyTrainDatas.Count <= 0)
+                return new List<ProductMonthlyTrainData>();
+
+            resolvedData.Add(productMonthlyTrainDatas[0]);
+            for (int i = 1; i < productMonthlyTrainDatas.Count; i++)
+            {
+                var lastMonth = resolvedData[resolvedData.Count - 1].Month;
+                if(lastMonth + 1 == productMonthlyTrainDatas[i].Month)
+                {
+                    resolvedData.Add(productMonthlyTrainDatas[i]);
+                } 
+                else if(lastMonth < productMonthlyTrainDatas[i].Month)
+                {
+                    var missingMonths = productMonthlyTrainDatas[i].Month - lastMonth;
+                    for(int j = 1;j <= missingMonths; j++)
+                    {
+                        if(trainDataCache.ContainsKey((int)lastMonth + 1))
+                        {
+                            resolvedData.Add(new ProductMonthlyTrainData()
+                            {
+                                Month = j + lastMonth,
+                                CurrentMonthQuantity = trainDataCache[(int)lastMonth + j].CurrentMonthQuantity,
+                                Next = 0
+                            });
+                        } 
+                        else
+                        {
+                            resolvedData.Add(new ProductMonthlyTrainData()
+                            {
+                                Month = lastMonth + j,
+                                CurrentMonthQuantity = resolvedData[resolvedData.Count - 1].CurrentMonthQuantity,
+                                Next = 0
+                            });
+                        }
+                    }
+                    resolvedData.Add(productMonthlyTrainDatas[i]);
+                } 
+                else
+                {
+                    for(int j = (int)lastMonth + 1;j <= 12;j++)
+                    {
+                        if (trainDataCache.ContainsKey(j))
+                        {
+                            resolvedData.Add(new ProductMonthlyTrainData()
+                            {
+                                Month = j,
+                                CurrentMonthQuantity = trainDataCache[j].CurrentMonthQuantity,
+                                Next = 0
+                            });
+                        } 
+                        else
+                        {
+                            resolvedData.Add(new ProductMonthlyTrainData()
+                            {
+                                Month = j,
+                                CurrentMonthQuantity = resolvedData[resolvedData.Count - 1].CurrentMonthQuantity,
+                                Next = 0
+                            });
+                        }
+                    }
+                    for(int j = 1;j < productMonthlyTrainDatas[i].Month;j++)
+                    {
+                        if (trainDataCache.ContainsKey(j))
+                        {
+                            resolvedData.Add(new ProductMonthlyTrainData()
+                            {
+                                Month = j,
+                                CurrentMonthQuantity = trainDataCache[j].CurrentMonthQuantity,
+                                Next = 0
+                            });
+                        }
+                        else
+                        {
+                            resolvedData.Add(new ProductMonthlyTrainData()
+                            {
+                                Month = j,
+                                CurrentMonthQuantity = resolvedData[resolvedData.Count - 1].CurrentMonthQuantity,
+                                Next = 0
+                            });
+                        }
+                    }
+                    resolvedData.Add(productMonthlyTrainDatas[i]); 
                 }
             }
             return resolvedData;
@@ -1568,6 +1706,37 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             return completeTrainingData;
         }
 
+        private async Task<List<ProductMonthlyTrainData>> PrepareIndividualProductMonthlyTrainingData(Product product, bool DiscountAppliedFrequently)
+        {
+            var query = from oi in _orderItemRepository.Table
+                        join o in _orderRepository.Table on oi.OrderId equals o.Id
+                        where oi.ProductId == product.Id
+                        group oi by new
+                        {
+                            Year = o.CreatedOnUtc.Year,
+                            Month = o.CreatedOnUtc.Month,
+                        } into goi
+                        orderby new {goi.Key.Year, goi.Key.Month}
+                        select new ProductMonthlyTrainData()
+                        {
+                            Month = goi.Key.Month,
+                            CurrentMonthQuantity = goi.Sum(x => x.Quantity),
+                        };
+
+            var trainData = await query.ToListAsync();
+            
+            var missingValuesHandledMonthlyTrainData = HandleMissingValueForIndividualProductMonthlyTrainData(trainData);
+
+            var completeTrainingData = missingValuesHandledMonthlyTrainData.Select((x, index) => new ProductMonthlyTrainData
+            {
+                Month = x.Month,
+                CurrentMonthQuantity = x.CurrentMonthQuantity,
+                Next = index == missingValuesHandledMonthlyTrainData.Count - 1 ? 0 : missingValuesHandledMonthlyTrainData[index + 1].CurrentMonthQuantity,
+            }).ToList();
+
+            return completeTrainingData;
+        }
+
         #endregion
 
         #region Train and Save
@@ -1592,8 +1761,27 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             return (sucess, string.Empty);
         }
 
-        #endregion
+        public async Task<(bool, string)> TrainIndividualProductMonthlySalesPredictionModelAsync(Product product, bool DiscountAppliedFrequently, bool logInfo = false)
+        {
+            var sucess = false;
 
+            var productSalesHistory = await PrepareIndividualProductMonthlyTrainingData(product, DiscountAppliedFrequently);
+
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathIndividualProductForcasting);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, product.Id.ToString() + "monthly" + ".zip");
+
+            // save the training data to a csv file 
+            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+
+            // train and save to the database
+            ForecastingModelHelper.TrainAndSaveIndividualProductMonthlyModel(_mlContext, productSalesHistory, outputPathToSaveModel);
+            
+            sucess = true;
+
+            return (sucess, string.Empty);
+        }
+
+        #endregion
 
         #region Forcast 
 
@@ -1611,8 +1799,25 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             return score;
         }
 
+        public async Task<float> PredictMonthlySaleForEachIndividualProduct(Product product, bool DiscountAppliedFrequently)
+        {
+            var mlMonthlyModelPath = _fileProvider.MapPath(SalesForecastingDefaults.MLModelPathIndividualProductForcasting);
+            var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, product.Id.ToString() + "monthly" + ".zip");
+
+            // get this week data 
+            var sampleData = await PrepareIndividualProductMonthlyTrainingData(product, DiscountAppliedFrequently);
+            var sampleDatum = sampleData[sampleData.Count - 1];
+
+            var score = ForecastingModelHelper.PredictIndividualProductMonthlyModel(_mlContext, outputPathToSaveModel, sampleDatum);
+
+            return score;
+        }
+
+        
+
         #endregion
 
         #endregion
+
     }
 }

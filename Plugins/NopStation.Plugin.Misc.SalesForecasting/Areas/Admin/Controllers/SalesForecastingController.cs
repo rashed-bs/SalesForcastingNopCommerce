@@ -371,14 +371,16 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
         {
             // work here 
             var prediction = await _salesForecastingService.PredictCategorySalesContribution();
+            var categoryStock = await _salesForecastingService.GetStocksOfBestCategories();
             var salesResponse = new List<JsonResponse>();
             foreach(var eachPrediction in prediction)
             {
+                int categoryId = (int)eachPrediction.CategoryId;
                 salesResponse.Add(new JsonResponse
                 {
                     XLabelName = $"{eachPrediction.CategoryName}",
                     YLabelValuePredicted = eachPrediction.quantity, 
-                    YLabelValueInStock = (eachPrediction.quantity * 100)%80
+                    YLabelValueInStock = categoryStock[categoryId]
                 });
             }
             return Json(salesResponse);

@@ -121,6 +121,12 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Reference Include="Microsoft.ML.FastTree">
+	    <HintPath>C:\Users\BS1030\.nuget\packages\microsoft.ml.fasttree\2.0.1\lib\netstandard2.0\Microsoft.ML.FastTree.dll</HintPath>
+	  </Reference>
+	  <Reference Include="Microsoft.ML.LightGbm">
+	    <HintPath>C:\Users\BS1030\.nuget\packages\microsoft.ml.lightgbm\2.0.1\lib\netstandard2.0\Microsoft.ML.LightGbm.dll</HintPath>
+	  </Reference>
 	  <Reference Include="NopStation.Plugin.Misc.Actions">
 	    <HintPath>..\NopStation.Plugin.Misc.Core\NopStation.Plugin.Misc.Actions.dll</HintPath>
 	    <Private>False</Private>

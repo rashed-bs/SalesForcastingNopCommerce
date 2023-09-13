@@ -187,6 +187,8 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Factories
                         WeeklyUnitPrediction = predictionModel.WeeklyUnitPrediction,
                         WeeklyMonetaryPrediction = predictionModel.WeeklyMonetaryPrediction,
                         ProductName = (await _productService.GetProductByIdAsync(predictionModel.ProductId)).Name,
+                        MonthlyUnitPrediction = predictionModel.MonthlyUnitPrediction,
+                        MonthlyMonetaryPrediction = predictionModel.MonthlyMonetaryPrediction
                     };
                     return groupProductPredictionModel;
                 });

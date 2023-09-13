@@ -318,15 +318,20 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
 
                 // prepare, train model and save the model 
                 var status = await _salesForecastingService.TrainIndividualProductWeeklySalesPredictionModelAsync(product, productGroup.DiscountAppliedFrequently, false);
+                var statusMonthly = await _salesForecastingService.TrainIndividualProductMonthlySalesPredictionModelAsync(product, productGroup.DiscountAppliedFrequently, false);
                 // prepare prediction entity (create a new domain) and store globally 
                 var score = await _salesForecastingService.PredictSaleForEachIndividualProduct(product, productGroup.DiscountAppliedFrequently);
+                var scoreMonthly = await _salesForecastingService.PredictMonthlySaleForEachIndividualProduct(product, productGroup.DiscountAppliedFrequently);
                 var groupProductPrediction = new GroupProductsPrediction()
                 {
                     ProductGroupId = productGroup.Id,
                     ProductId = product.Id,
                     WeeklyUnitPrediction = (int)score,
                     WeeklyMonetaryPrediction = (float)score * (float)product.Price,
+                    MonthlyUnitPrediction = (int)scoreMonthly,
+                    MonthlyMonetaryPrediction = (float)scoreMonthly * (float)product.Price,
                 };
+                await _groupProductsPredictionRepository.DeleteAsync(x => x.ProductGroupId == productGroupModel.Id && x.ProductId == product.Id);
                 await _groupProductsPredictionRepository.InsertAsync(groupProductPrediction);
             }
             
@@ -338,8 +343,6 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Areas.Admin.Controllers
             var model = await _salesForecastingModelFactory.PrepareIndividualProductPredictionListModelAsync(searchModel);
             return Json(model);
         }
-
-
 
         #endregion
 

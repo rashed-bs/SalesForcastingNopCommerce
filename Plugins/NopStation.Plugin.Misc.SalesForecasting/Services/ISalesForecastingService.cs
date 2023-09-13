@@ -23,7 +23,9 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         Task<(bool, string)> TrainBaseMonthWiseProductSalesPredictionModelAsync(bool logInfo = false);
         Task<(bool, string)> TrainIndividualProductWeeklySalesPredictionModelAsync(Product product, bool DiscountAppliedFrequently, bool logInfo = false);
+        Task<(bool, string)> TrainIndividualProductMonthlySalesPredictionModelAsync(Product product, bool DiscountAppliedFrequently, bool logInfo = false);
         Task<float> PredictSaleForEachIndividualProduct(Product product, bool DiscountAppliedFrequently);
+        Task<float> PredictMonthlySaleForEachIndividualProduct(Product product, bool DiscountAppliedFrequently);
 
         Task<List<SalesData>> DailySalesHistoryQueryLastMonth();
 
@@ -34,6 +36,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
 
         Task<float> PredictEnsembleNextMonthSales();
 
+        Task<Dictionary<int, int>> GetStocksOfBestCategories();
         public void PathPreparation();
 
 

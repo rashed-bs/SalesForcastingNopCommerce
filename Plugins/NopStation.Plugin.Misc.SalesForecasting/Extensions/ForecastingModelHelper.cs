@@ -323,6 +323,26 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Extensions
             var prediction = predictEngine.Predict(sampleData);
             return prediction.Score;
         }
+        
+        public static void TrainAndSaveIndividualProductMonthlyModel(MLContext mlContext, List<ProductMonthlyTrainData> productSalesHistory, string outputModelPath)
+        {
+            var pipeline = mlContext.Transforms.ReplaceMissingValues(new[] { new InputOutputColumnPair(@"Month", @"Month"), new InputOutputColumnPair(@"CurrentMonthQuantity", @"CurrentMonthQuantity") })
+                                    .Append(mlContext.Transforms.Concatenate(@"Features", new[] { @"Month", @"CurrentMonthQuantity" }))
+                                    .Append(mlContext.Regression.Trainers.FastForest(new FastForestRegressionTrainer.Options() { NumberOfTrees = 4, NumberOfLeaves = 4, FeatureFraction = 1F, LabelColumnName = @"Next", FeatureColumnName = @"Features" }));
+            var trainingDataView = mlContext.Data.LoadFromEnumerable(productSalesHistory);
+            var model = pipeline.Fit(trainingDataView);
+
+            // Save the model for later comsumption from end-user apps.
+            mlContext.Model.Save(model, trainingDataView.Schema, outputModelPath);
+        }
+
+        public static float PredictIndividualProductMonthlyModel(MLContext mlContext, string outputModelPath, ProductMonthlyTrainData sampleData)
+        {
+            ITransformer mlModel = mlContext.Model.Load(outputModelPath, out var _);
+            var predictEngine = mlContext.Model.CreatePredictionEngine<ProductMonthlyTrainData, ModelMonthlyOutput>(mlModel);
+            var prediction = predictEngine.Predict(sampleData);
+            return prediction.Score;
+        }
         #endregion
     }
 }

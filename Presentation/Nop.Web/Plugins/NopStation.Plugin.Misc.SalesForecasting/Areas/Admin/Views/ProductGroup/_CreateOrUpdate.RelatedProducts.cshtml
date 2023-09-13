@@ -105,12 +105,18 @@
             {
             new ColumnProperty(nameof(GroupProductPredictionModel.ProductName))
             {
-            Title = "Product name"
+            Title = T("Admin.SalesForecasting.SalesPrediction.Table.ProductName").Text
             },
             new ColumnProperty(nameof(GroupProductPredictionModel.WeeklyUnitPrediction))
             {
-            Title = "Weekly Unit Prediction"
+            Title = T("Admin.SalesForecasting.SalesPrediction.Table.WeeklyUnitPrediction").Text
             },
+
+            new ColumnProperty(nameof(GroupProductPredictionModel.MonthlyUnitPrediction))
+            {
+            Title = T("Admin.SalesForecasting.SalesPrediction.Table.MonthlyUnitPrediction").Text
+            },
+
             
             }
             })
