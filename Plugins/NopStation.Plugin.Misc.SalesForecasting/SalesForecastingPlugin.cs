@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Nop.Core;
@@ -61,6 +63,44 @@ namespace NopStation.Plugin.Misc.SalesForecasting
         /// </summary>
         public override async Task InstallAsync()
         {
+
+            #region .dll and runtime loading
+
+            // Get the base directory of your application
+            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+            // Specify the relative paths to the source and destination folders
+            string sourceFolder = baseDirectory + "..\\..\\..\\Plugins\\NopStation.Plugin.Misc.SalesForecasting\\Runtimes_x64";
+            string destinationFolder = baseDirectory + "runtimes\\win-x64\\native";
+
+            // Ensure the destination folder exists, create it if necessary
+            if (!Directory.Exists(destinationFolder))
+            {
+                Directory.CreateDirectory(destinationFolder);
+            }
+
+            string[] allFiles = Directory.GetFiles(sourceFolder);
+
+            foreach (string file in allFiles)
+            {
+                // Get the file name
+                string fileName = Path.GetFileName(file);
+
+                // Check if the file already exists in the destination folder
+                if (!File.Exists(destinationFolder + "\\" + fileName))
+                {
+                    // Copy the file to the destination folder
+                    File.Copy(file, destinationFolder + "\\" + fileName);
+                }
+                else
+                {
+                    Console.WriteLine("file already exist");
+                }
+            }
+
+            #endregion
+
+
             await this.InstallPluginAsync(new SalesForecastingProvider());
 
             //settings

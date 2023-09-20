@@ -1169,7 +1169,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryWiseBaseModel);
 
             // save the training data to a csv file 
-            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+            //CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
             var metric = ForecastingModelHelper.TrainAndSaveCategoryWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
 
@@ -1195,7 +1195,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesLocationWiseBaseModel);
 
             // save the training data to a csv file 
-            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+            //CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
             var metric = ForecastingModelHelper.TrainAndSaveLocationWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
 
@@ -1222,7 +1222,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesCategoryAvgPriceWiseBaseModel);
 
             // save the training data to a csv file 
-            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+            //CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
             var metric = ForecastingModelHelper.TrainAndSaveAveragePriceWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
 
@@ -1249,7 +1249,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, SalesForecastingDefaults.ProductSalesMonthWiseBaseModel);
 
             // save the training data to a csv file 
-            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+            //CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
             var metric = ForecastingModelHelper.TrainAndSaveMonthWiseBaseModel(_mlContext, productSalesHistory, outputPathToSaveModel);
 
@@ -1751,7 +1751,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, product.Id.ToString()+".zip");
 
             // save the training data to a csv file 
-            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+            //CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
             // train and save to the database
             ForecastingModelHelper.TrainAndSaveIndividualProductModel(_mlContext, productSalesHistory, outputPathToSaveModel);
@@ -1771,7 +1771,7 @@ namespace NopStation.Plugin.Misc.SalesForecasting.Services
             var outputPathToSaveModel = _fileProvider.Combine(mlMonthlyModelPath, product.Id.ToString() + "monthly" + ".zip");
 
             // save the training data to a csv file 
-            CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
+            //CsvWriter.WriteToCsv(outputPathToSaveModel + "trainingData.csv", productSalesHistory);
 
             // train and save to the database
             ForecastingModelHelper.TrainAndSaveIndividualProductMonthlyModel(_mlContext, productSalesHistory, outputPathToSaveModel);
